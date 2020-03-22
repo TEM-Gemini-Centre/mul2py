@@ -13,7 +13,7 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3.7",
         "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "License :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering",
@@ -26,7 +26,8 @@ setup(
         "pathlib",
         "hyperspy",
         "h5py",
-        "argparse"
+        "argparse",
+        "tabulate"
 
     ],
     package_data={

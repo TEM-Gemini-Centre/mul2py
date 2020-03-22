@@ -1,62 +1,114 @@
 import hyperspy.api as hs
 import numpy as np
-import h5py as hdf
 from pathlib import Path
+from functools import reduce
+from ..io.hdf import HDFReader
 
 
-def resolve_reference(hdf_file, ref):
-    """Resolve a HDF reference"""
-    if isinstance(ref, hdf.h5r.Reference):
-        return hdf_file[ref]
-    else:
-        return ref
+class Error(Exception):
+    pass
 
 
-def unpack_grp(hdf_group, hdf_file=None):
-    """Return the members and sub-members of a hdf group as a dictionary
-
-    Iteratively unpacks all the members and sub-members of a hdf group and returns it as a dictionary.
-    If the HDF file object is also given, the refernces will be resolved before being added to the dictionary.
-
-    Parameters
-    ----------
-    hdf_group : A h5py._hl.group.Group object
-        The group to unpack
-    hdf_file : A h5py file object, optional.
-        If given, also attempt to resolve any references found in the hdf group.
-
-    Returns
-    -------
-    dictionary : A dict of the members in the hdf5 group
-
-    """
-    if isinstance(hdf_group, hdf._hl.group.Group):
-        dictionary = {}
-        for key in hdf_group.keys():
-            dictionary[key] = unpack_grp(hdf_group[key])
-        return dictionary
-    else:
-        value = np.array(hdf_group)
-        if hdf_file is not None:  # Attempt to resolve eventual references
-            value = np.array([resolve_reference(hdf_file, ref) for ref in value.flat]).reshape(np.shape(value))
-
-        # Extract different data shapes (so that integers are not 2D arrays etc
-        if value.shape == (1, 1):
-            value = value.ravel()[0]
-        elif value.shape[0] > 1 and value.shape[1] == 1:
-            value = value.ravel()
-        else:
-            value = value
-        return value
+class LoadError(Error):
+    pass
 
 
 def set_original_metadata(signal, dictionary, filepath='', simulation_type=''):
     try:
         signal.original_metadata.add_dictionary({'SimulationParameters': dictionary})
-        signal.original_metadata.General.original_filename = filepath
-        signal.original_metadata.Signal.simulation_type = simulation_type
+        signal.original_metadata.add_dictionary({'General': {'original_filename': filepath}})
+        signal.original_metadata.add_dictionary({'Signal': {'simulation_type': simulation_type}})
     except KeyError as e:
         print(e)
+
+
+def set_important_simulation_parameters(signal, simulation_type=None, metadata_dict=None):
+    """Sets the signal metadata field `SimulationParameters` based on contents in the original metadata
+
+    Goes through predefined metadata keys that are deemed important for the given simulation type and copies the relevant metadata from `signal.original_metadata`.
+
+    Parameters
+    ----------
+    signal: hyperspy.api.signals.Signal2D
+        The signal to set metadata values for
+    simulation_type: str or None. Optional.
+        The simulation type. THis will decide which parameters are set. Default is None, in which case it sets "common" important parameters such as the potential grid resolution and specimen parameters.
+    metadata_dict: dict or None. Optional.
+        A dictionary with key-value pairs for manual specification of metadata. Can be used to specify user-specific details, such as the GPU that was used, the simulation time, etc.
+
+
+    """
+    _important_parameters = {
+        'hrtem': [
+            'obj_lens_c_10',
+            'obj_lens_c_30',
+        ],
+        'stem': [
+            'cond_lens_c_10',
+            'cond_lens_c_30',
+            'cond_lens_outer_aper_ang',
+            'detector',
+            'scanning_x0',
+            'scanning_y0',
+            'scanning_xe',
+            'scanning_ye',
+            'scanning_ns',
+            'scanning_periodic',
+        ],
+        'cbed': [
+            'cond_lens_c_10',
+            'cond_lens_c_30',
+            'cond_lens_outer_aper_ang',
+            'x',
+            'y'
+        ],
+        'scbed': [
+            'cond_lens_c_10',
+            'cond_lens_c_30',
+            'cond_lens_outer_aper_ang',
+        ],
+        'ewrs': [
+            'cond_lens_c_10',
+            'cond_lens_c_30',
+            'cond_lens_outer_aper_ang'
+        ],
+        'all': [
+            'E_0',
+            'nx',
+            'ny',
+            'spec_lx',
+            'spec_ly',
+            'spec_lz',
+            'spec_dz',
+            'thick',
+            'thick_type',
+            'spec_atoms'
+        ]
+
+    }
+
+    if simulation_type is None:
+        simulation_type = 'all'
+
+    if metadata_dict is not None:
+        for key in metadata_dict:
+            try:
+                signal.metadata.add_dictionary({'SimulationParameters': {key: metadata_dict[key]}})
+            except KeyError as e:
+                print('Exception when setting manual simulation parameter "{key}". \n{error}'.format(key=key, error=e))
+    else:
+        for important_parameter in _important_parameters[simulation_type]:
+            try:
+                signal.metadata.add_dictionary({
+                    'SimulationParameters': {
+                        important_parameter: signal.original_metadata['SimulationParameters'][important_parameter]
+                    }
+                })
+            except KeyError as e:
+                print(
+                    'Exception when setting Simulation parameter metadata for important parameter "{key}":\n{error}'.format(
+                        key=important_parameter, error=e))
+                pass
 
 
 def set_axes(signal, ax, values, name=None, units='Å', set_offset=True):
@@ -76,79 +128,242 @@ def set_axes(signal, ax, values, name=None, units='Å', set_offset=True):
         print(e)
 
 
-def build_ewrs(filepath):
-    filepath = Path(filepath)
+def load_output(output_file, image_type):
+    """ Reads a MULTEM `output_multislice` file
+
+    Reads a hdf file and tries to build a hyperspy signal by assuming that the HDF file has a group named 'output_multislice' at its root.
+
+    Parameters
+    ----------
+    output_file: str,
+        Path to the HDF file
+    image_type: str. 'image_tot' or 'm2psi_tot'.
+        The type of data.
+
+    Returns
+    -------
+    signal: hyperspy.api.signals.Signal2D
+        The image stack as a hyperspy signal.
+    hdf_file: HDFReader,
+        The contents of the hdf file - useful for getting more details/metadata.
+    """
+
+    filepath = Path(output_file)
+    hdf_file = HDFReader(filepath)
+    hdf_file.remove_excess_dimensions()  # Remove the excess dimensions of all attributes
+
+    if image_type == 'image_tot':  # Load pattern of `image_tot`
+        image_shape = hdf_file.output_multislice.data.image_tot.image_tot0.resolved_reference.image.image0.resolved_reference.shape
+        detectors = hdf_file.output_multislice.data.image_tot.image_tot0.resolved_reference.image.depth
+        stack_depth = hdf_file.output_multislice.data.image_tot.depth
+        if detectors > 1:
+            stack_dimensions = (stack_depth, detectors, image_shape[0], image_shape[1])
+        else:
+            stack_dimensions = (stack_depth, image_shape[0], image_shape[1])
+        image_stack = np.zeros(stack_dimensions)
+        for t in range(stack_depth):
+            for detector in range(detectors):
+                # Get the image for each thickness and detector. Must use reduce and getattr to access the data properly.
+                image_stack[t, detector, :, :] = reduce(getattr, (
+                    'output_multislice', 'data', 'image_tot', 'image_tot{t}'.format(t=t), 'resolved_reference',
+                    'image', 'image{detector}'.format(detector=detector), 'resolved_reference', '_content'),
+                                                        hdf_file)
+    elif image_type == 'm2psi_tot':  # Load pattern of `m2psi_tot`
+        image_shape = hdf_file.output_multislice.data.m2psi_tot.m2psi_tot0.resolved_reference.shape
+        stack_depth = hdf_file.output_multislice.data.m2psi_tot.depth
+        stack_dimensions = (stack_depth, image_shape[0], image_shape[1])
+        image_stack = np.zeros(stack_dimensions)
+        for t in range(stack_depth):
+            # Get the image for each thickness. Must use reduce and getattr to access the data properly.
+            image_stack[t, :, :] = reduce(getattr, (
+                'output_multislice', 'data', 'm2psi_tot', 'm2psi_tot{t}'.format(t=t), 'resolved_reference', '_content'),
+                                          hdf_file)
+    else:
+        return NotImplemented
+    signal = hs.signals.Signal2D(image_stack)
+    hdf_file.close()
+    return signal, hdf_file.output_multislice
+
+
+def load_input(input_file):
+    """Loads a MULTEM `input_multislice` file
+
+    Reads a hdf file and tries to extract the contents into a dictionary by assuming that the HDF file has a group named 'input_multislice' at its root.
+
+    Parameters
+    ----------
+    input_file: str
+        Path to HDF file
+
+    Returns
+    -------
+    input_parameters: dict
+        Dictionary of the HDF file.
+    """
+    filepath = Path(input_file)
+    hdf_file = HDFReader(filepath)
+    hdf_file.remove_excess_dimensions()  # Remove the excess dimensions of all attributes
+
+    input_parameters = hdf_file.content2dict()
+    return input_parameters
+
+
+def load_results(results_file):
+    """Reads a MULTEM results file (following the ".ecmat" format)
+
+    Reads a hdf file and builds a hyperspy signal by assumint that the HDF file has a group named 'results/images' at its root.
+
+    The .ecmat format is my (Emil Christiansen) own way of structuring output in .mat files from MULTEM (ecmat = ECmat = easymat) that makes it easier to load e.g. scanning CBED or scanning EWRS results.
+
+    Parameters
+    ----------
+    results_file: str
+        Path to HDF file.
+
+    Returns
+    -------
+    signal: hs.signals.Signal2D
+        The image stack as a hyperspy signal
+    hdf_file: HDFReader
+        The contents of the hdf file - useful for getting more details/metadata later
+    """
+
+    filepath = Path(results_file)
+    hdf_file = HDFReader(filepath)
+    hdf_file.remove_excess_dimensions()
+    image_stack = reduce(getattr, ('results', 'images', '_content'), hdf_file)
+    return hs.signals.Signal2D(image_stack), hdf_file.results
+
+
+def build_ewrs(filepath, simulation_parameter_file=None):
     """Build a HyperSpy stack from a stack of exit waves (real-space)"""
-    with hdf.File(filepath, 'r') as hdf_file:
-        signal = hs.signals.Signal2D(hdf_file['results']['images'])
-        xs = np.array(hdf_file['results']['xs']).ravel()
-        ys = np.array(hdf_file['results']['ys']).ravel()
-        dx = np.array(hdf_file['results']['dx']).ravel()[0]
-        dy = np.array(hdf_file['results']['dy']).ravel()[0]
-        input_parameters = unpack_grp(hdf_file['results']['input'])
-        hdf_file.close()
-    signal = signal.transpose(navigation_axes=[3, 4, 0], signal_axes=[1, 2], optimize=True)
+    try:
+        signal, data = load_output(filepath, 'm2psi_tot')
+    except AttributeError:
+        signal, data = load_results(filepath)
+    finally:
+        xs = data.xs.content
+        ys = data.ys.content
+        try:
+            z = data.thick.content
+        except AttributeError:
+            z = data.thicknesses.content
+        dx = data.dx.content
+        dy = data.dy.content
+
+    if simulation_parameter_file is not None:
+        input_parameters = load_input(simulation_parameter_file)
+    else:
+        input_parameters = data.content2dict()
 
     # Set original metadata
     set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='EWRS')
 
     # Set axes properties
-    set_axes(signal, 0, xs, name='x')
-    set_axes(signal, 1, 'y', ys)
-    set_axes(signal, 2, 'z', signal.original_metadata.SimulationParameters.thick)
-    set_axes(signal, 3, 'dx', dx, set_offset=False)
-    set_axes(signal, 4, 'dy', dy, set_offset=False)
+    #set_axes(signal, 0, xs, name='x')
+    #set_axes(signal, 1, ys, name='y')
+    #set_axes(signal, 2, z, name='z')
+    #set_axes(signal, 3, dx, name='dx', set_offset=False)
+    #set_axes(signal, 4, dy, name='dy', set_offset=False)
+
+    # Set metadata
+    # Set important parameters (common for all simulation types)
+    try:
+        set_important_simulation_parameters(signal)
+    except AttributeError as e:
+        print('Could not set general important simulation parameter:\n{err}'.format(err=e))
+    # Set simulation specific parameters
+    try:
+        set_important_simulation_parameters(signal, 'ewrs')
+    except AttributeError as e:
+        print('Could not set important EWRS simulation parameter:\n{err}'.format(err=e))
 
     return signal
 
 
-def build_cbed(filepath):
-    filepath = Path(filepath)
+def build_cbed(filepath, simulation_parameter_file=None):
     """Build a HyperSpy stack from SCBED data"""
-    with hdf.File(filepath, 'r') as hdf_file:
-        signal = hs.signals.Signal2D(hdf_file['results']['images'])
-        x = np.array(hdf_file['results']['x']).ravel()[0]
-        y = np.array(hdf_file['results']['y']).ravel()[0]
-        dx = np.array(hdf_file['results']['dx']).ravel()[0]
-        dy = np.array(hdf_file['results']['dy']).ravel()[0]
-        input_parameters = unpack_grp(hdf_file['results']['input'])
-        input_parameters['x'] = x
-        input_parameters['y'] = y
-        hdf_file.close()
+    try:
+        signal, data = load_output(filepath, 'm2psi_tot')
+    except AttributeError:
+        signal, data = load_results(filepath)
+    finally:
+        try:
+            z = data.thick.content
+        except AttributeError:
+            z = data.thicknesses.content
+        dx = data.dx.content
+        dy = data.dy.content
 
-    signal = signal.transpose(navigation_axes=[1], signal_axes=[0, 2], optimize=True)
+    if simulation_parameter_file is not None:
+        input_parameters = load_input(simulation_parameter_file)
+    else:
+        input_parameters = data.content2dict()
 
     # Set original metadata
     set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='CBED')
 
+    # Set important parameters (common for all simulation types)
+    try:
+        set_important_simulation_parameters(signal)
+    except AttributeError as e:
+        print('Could not set general important simulation parameter:\n{err}'.format(err=e))
+    # Set simulation specific parameters
+    try:
+        set_important_simulation_parameters(signal, 'cbed')
+    except AttributeError as e:
+        print('Could not set important CBED simulation parameter:\n{err}'.format(err=e))
+
     # Set axes properties
-    set_axes(signal, 0, 'z', signal.original_metadata.SimulationParameters.thick)
-    set_axes(signal, 1, 'x', dx)
-    set_axes(signal, 2, 'y', dy)
+    set_axes(signal, 0, z, name='z')
+    set_axes(signal, 1, dx, name='x')
+    set_axes(signal, 2, dy, name='y')
 
     return signal
 
 
-def build_scbed(filepath):
-    filepath = Path(filepath)
+def build_scbed(filepath, simulation_parameter_file=None):
     """Build a HyperSpy stack from SCBED data"""
-    with hdf.File(filepath, 'r') as hdf_file:
-        signal = hs.signals.Signal2D(hdf_file['results']['images'])
-        xs = np.array(hdf_file['results']['xs']).ravel()
-        ys = np.array(hdf_file['results']['ys']).ravel()
-        dx = np.array(hdf_file['results']['dx']).ravel()[0]
-        dy = np.array(hdf_file['results']['dy']).ravel()[0]
-        input_parameters = unpack_grp(hdf_file['results']['input'])
-        hdf_file.close()
+    try:
+        signal, data = load_output(filepath, 'm2psi_tot')
+    except AttributeError:
+        signal, data = load_results(filepath)
+    finally:
+        xs = data.xs.content
+        ys = data.ys.content
+        try:
+            z = data.thick.content
+        except AttributeError:
+            z = data.thicknesses.content
+        dx = data.dx.content
+        dy = data.dy.content
+
+    if simulation_parameter_file is not None:
+        input_parameters = load_input(simulation_parameter_file)
+    else:
+        input_parameters = data.content2dict()
+
     signal = signal.transpose(navigation_axes=[3, 4, 0], signal_axes=[1, 2], optimize=True)
 
     # Set original metadata
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='SCBED')
+
+    # Set important parameters (common for all simulation types)
+    try:
+        set_important_simulation_parameters(signal)
+    except AttributeError as e:
+        print('Could not set general important simulation parameter:\n{err}'.format(err=e))
+    # Set simulation specific parameters
+    try:
+        set_important_simulation_parameters(signal, 'scbed')
+    except AttributeError as e:
+        print('Could not set important SCBED simulation parameter:\n{err}'.format(err=e))
 
     # Set axes properties
     try:
         set_axes(signal, 0, 'x', xs)
         set_axes(signal, 1, 'y', ys)
-        set_axes(signal, 2, 'z', signal.original_metadata.SimulationParameters.thick)
+        set_axes(signal, 2, 'z', z)
         set_axes(signal, 3, 'dx', dx, units='Å^-1')
         set_axes(signal, 4, 'dy', dy, units='Å^-1')
     except ValueError as e:
@@ -157,30 +372,86 @@ def build_scbed(filepath):
     return signal
 
 
-def build_hrtem(filepath):
-    filepath = Path(filepath)
+def build_hrtem(filepath, simulation_parameter_file=None):
     """Build a HyperSpy stack from HRTEM data"""
-    with hdf.File(filepath, 'r') as hdf_file:
-        signal = hs.signals.Signal2D(hdf_file['results']['images'])
-        dx = np.array(hdf_file['results']['dx']).ravel()[0]
-        dy = np.array(hdf_file['results']['dy']).ravel()[0]
-        input_parameters = unpack_grp(hdf_file['results']['input'])
-        hdf_file.close()
-    signal = signal.transpose(navigation_axes=[2], signal_axes=[0, 1], optimize=True)
+    try:
+        signal, data = load_output(filepath, 'm2psi_tot')
+    except AttributeError:
+        signal, data = load_results(filepath)
+    finally:
+        try:
+            z = data.thick.content
+        except AttributeError:
+            z = data.thicknesses.content
+        dx = data.dx.content
+        dy = data.dy.content
 
-    # Set original metadata
+    if simulation_parameter_file is not None:
+        input_parameters = load_input(simulation_parameter_file)
+    else:
+        input_parameters = data.content2dict()
+
     set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='HRTEM')
+
+    # Set important parameters (common for all simulation types)
+    try:
+        set_important_simulation_parameters(signal)
+    except AttributeError as e:
+        print('Could not set general important simulation parameter:\n{err}'.format(err=e))
+    # Set simulation specific parameters
+    try:
+        set_important_simulation_parameters(signal, 'hrtem')
+    except AttributeError as e:
+        print('Could not set important HRTEM simulation parameter:\n{err}'.format(err=e))
 
     # Set axes properties
     set_axes(signal, 0, 'x', dx)
     set_axes(signal, 1, 'y', dy)
-    set_axes(signal, 2, 'z', signal.original_metadata.SimulationParameters.thick)
+    set_axes(signal, 2, 'z', z)
 
     return signal
 
 
-def build_stem(filepath):
-    return NotImplementedError('Conversion of STEM data is not implemented yet')
+def build_stem(filepath, simulation_parameter_file=None):
+    """Build a HyperSpy stack from STEM data"""
+    try:
+        signal, data = load_output(filepath, 'image_tot')
+    except AttributeError:
+        signal, data = load_results(filepath)
+    finally:
+        try:
+            z = data.thick.content
+        except AttributeError:
+            z = data.thicknesses.content
+
+        xs = np.linspace(data.scanning_x0, data.scanning_xe, data.scanning_ns, endpoint=data.scanning_periodic)
+        ys = np.linspace(data.scanning_y0, data.scanning_ye, data.scanning_ns, endpoint=data.scanning_periodic)
+
+    if simulation_parameter_file is not None:
+        input_parameters = load_input(simulation_parameter_file)
+    else:
+        input_parameters = data.content2dict()
+
+    # Set original metadata
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='STEM')
+
+    # Set important parameters (common for all simulation types)
+    try:
+        set_important_simulation_parameters(signal)
+    except AttributeError as e:
+        print('Could not set general important simulation parameter:\n{err}'.format(err=e))
+    # Set simulation specific parameters
+    try:
+        set_important_simulation_parameters(signal, 'stem')
+    except AttributeError as e:
+        print('Could not set important STEM simulation parameter:\n{err}'.format(err=e))
+
+    # Set axes properties
+    set_axes(signal, 0, 'x', xs)
+    set_axes(signal, 1, 'y', ys)
+    set_axes(signal, 2, 'z', z)
+
+    return signal
 
 
 def build_ped(filepath):
