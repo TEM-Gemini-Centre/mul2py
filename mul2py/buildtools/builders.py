@@ -59,8 +59,8 @@ def set_important_simulation_parameters(signal, simulation_type=None, metadata_d
             'cond_lens_c_10',
             'cond_lens_c_30',
             'cond_lens_outer_aper_ang',
-            'x',
-            'y'
+            'iw_x',
+            'iw_y'
         ],
         'scbed': [
             'cond_lens_c_10',
@@ -111,21 +111,27 @@ def set_important_simulation_parameters(signal, simulation_type=None, metadata_d
                 pass
 
 
-def set_axes(signal, ax, values, name=None, units='Å', set_offset=True):
-    if name is not None:
-        signal.axes_manager[ax].name = name
-    try:
-        signal.axes_manager[ax].units = units
-        if np.size(values) > 1:
-            if set_offset:
-                signal.axes_manager[ax].offset = np.min(values)
-            signal.axes_manager[ax].scale = (np.max(values) - np.min(values)) / np.size(values)
-        else:
-            signal.axes_manager[ax].offset = values
-            signal.axes_manager[ax].scale = 1
-            signal.axes_manager[ax].units = 'px'
-    except ValueError as e:
-        print(e)
+def set_axes(signal, ax, values, **kwargs):
+    name = kwargs.get('name', '')
+    units = kwargs.get('units', 'Å')
+    offset = kwargs.get('offset', None)
+    scale = kwargs.get('scale', None)
+
+    if np.size(values) > 1:
+        if offset is None:
+            offset = np.min(values)
+        if scale is None:
+            scale = (np.max(values) - np.min(values)) / np.size(values)
+    else:
+        if offset is None:
+            offset = values
+        if scale is None:
+            scale = values
+
+    signal.axes_manager[ax].name = name
+    signal.axes_manager[ax].units = units
+    signal.axes_manager[ax].scale = scale
+    signal.axes_manager[ax].offset = offset
 
 
 def load_output(output_file, image_type):
@@ -226,6 +232,20 @@ def load_results(results_file):
         The image stack as a hyperspy signal
     hdf_file: HDFReader
         The contents of the hdf file - useful for getting more details/metadata later
+
+    Notes
+    -----
+    The `ecmat` format should appear like this:
+    root - `results`:
+        results - `images`: (nx, ny, (sx), (sy), (thick)), where nx and ny are the potential size, (sx) and (sy) are the (optional) scan dimensions and (thick) is the (optional) thickness-dimensions.
+            IMPORTANT! due to differences in MATLAB/python arrays, `results.images` should contain the _transposed_ array, i.e. `results.images(:, :, i, j, t) = transpose(image);`  is the proper way of assigning in MATLAB.
+        results - `input`: the `input_multislice` struct used in MULTEM (used for building metadata)
+        results - `dx`: the potential resolution in x (float)
+        results - `dy`: the potential resolution in y (float)
+        results - `xs`: the _manual_ scan x positions (used in e.g. scanning EWRS or SCBED)
+        results - `ys`: the _manual_ scan y positions (used in e.g. scanning EWRS or SCBED)
+        results - `thick`: the specimen thicknesses taken from the output of the multislice simulation (optional if `results.thicknesses` is given)
+        results - `thicknesses`: the specimen thicknesses taken from the output of the multislice simulation at each _manual_ scan position (for validation and completeness) (optional if `results.thick` is given)
     """
 
     filepath = Path(results_file)
@@ -254,17 +274,17 @@ def build_ewrs(filepath, simulation_parameter_file=None):
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
-        input_parameters = data.content2dict()
+        input_parameters = data.input.content2dict()
 
     # Set original metadata
     set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='EWRS')
 
     # Set axes properties
-    #set_axes(signal, 0, xs, name='x')
-    #set_axes(signal, 1, ys, name='y')
-    #set_axes(signal, 2, z, name='z')
-    #set_axes(signal, 3, dx, name='dx', set_offset=False)
-    #set_axes(signal, 4, dy, name='dy', set_offset=False)
+    set_axes(signal, 0, xs, name='x')
+    set_axes(signal, 1, ys, name='y')
+    set_axes(signal, 2, z, name='z')
+    set_axes(signal, 3, dx, name='X')
+    set_axes(signal, 4, dy, name='Y')
 
     # Set metadata
     # Set important parameters (common for all simulation types)
@@ -298,7 +318,7 @@ def build_cbed(filepath, simulation_parameter_file=None):
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
-        input_parameters = data.content2dict()
+        input_parameters = data.input.content2dict()
 
     # Set original metadata
     set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='CBED')
@@ -316,8 +336,8 @@ def build_cbed(filepath, simulation_parameter_file=None):
 
     # Set axes properties
     set_axes(signal, 0, z, name='z')
-    set_axes(signal, 1, dx, name='x')
-    set_axes(signal, 2, dy, name='y')
+    set_axes(signal, 1, dx, name='kx', units='Å^-1')
+    set_axes(signal, 2, dy, name='ky', units='Å^-1')
 
     return signal
 
@@ -341,9 +361,7 @@ def build_scbed(filepath, simulation_parameter_file=None):
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
-        input_parameters = data.content2dict()
-
-    signal = signal.transpose(navigation_axes=[3, 4, 0], signal_axes=[1, 2], optimize=True)
+        input_parameters = data.input.content2dict()
 
     # Set original metadata
     set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='SCBED')
@@ -360,14 +378,11 @@ def build_scbed(filepath, simulation_parameter_file=None):
         print('Could not set important SCBED simulation parameter:\n{err}'.format(err=e))
 
     # Set axes properties
-    try:
-        set_axes(signal, 0, 'x', xs)
-        set_axes(signal, 1, 'y', ys)
-        set_axes(signal, 2, 'z', z)
-        set_axes(signal, 3, 'dx', dx, units='Å^-1')
-        set_axes(signal, 4, 'dy', dy, units='Å^-1')
-    except ValueError as e:
-        print(e)
+    set_axes(signal, 0, xs, name='x')
+    set_axes(signal, 1, ys, name='y')
+    set_axes(signal, 2, z, name='z')
+    set_axes(signal, 3, dx, name='kx', units='Å^-1')
+    set_axes(signal, 4, dy, name='ky', units='Å^-1')
 
     return signal
 
@@ -389,7 +404,7 @@ def build_hrtem(filepath, simulation_parameter_file=None):
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
-        input_parameters = data.content2dict()
+        input_parameters = data.input.content2dict()
 
     set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='HRTEM')
 
@@ -405,9 +420,9 @@ def build_hrtem(filepath, simulation_parameter_file=None):
         print('Could not set important HRTEM simulation parameter:\n{err}'.format(err=e))
 
     # Set axes properties
-    set_axes(signal, 0, 'x', dx)
-    set_axes(signal, 1, 'y', dy)
-    set_axes(signal, 2, 'z', z)
+    set_axes(signal, 0, z, name='z')
+    set_axes(signal, 1, dx, name='x')
+    set_axes(signal, 2, dy, name='y')
 
     return signal
 
@@ -424,13 +439,13 @@ def build_stem(filepath, simulation_parameter_file=None):
         except AttributeError:
             z = data.thicknesses.content
 
-        xs = np.linspace(data.scanning_x0, data.scanning_xe, data.scanning_ns, endpoint=data.scanning_periodic)
-        ys = np.linspace(data.scanning_y0, data.scanning_ye, data.scanning_ns, endpoint=data.scanning_periodic)
+        xs = np.linspace(data.scanning_x0, data.scanning_xe, data.scanning_ns, endpoint=data.scanning_periodic.content)
+        ys = np.linspace(data.scanning_y0, data.scanning_ye, data.scanning_ns, endpoint=data.scanning_periodic.content)
 
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
-        input_parameters = data.content2dict()
+        input_parameters = data.input.content2dict()
 
     # Set original metadata
     set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='STEM')
@@ -447,9 +462,9 @@ def build_stem(filepath, simulation_parameter_file=None):
         print('Could not set important STEM simulation parameter:\n{err}'.format(err=e))
 
     # Set axes properties
-    set_axes(signal, 0, 'x', xs)
-    set_axes(signal, 1, 'y', ys)
-    set_axes(signal, 2, 'z', z)
+    set_axes(signal, 0, z, name='z')
+    set_axes(signal, 1, xs, name='x')
+    set_axes(signal, 2, ys, name='y')
 
     return signal
 

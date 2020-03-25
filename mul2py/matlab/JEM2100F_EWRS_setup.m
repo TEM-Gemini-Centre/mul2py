@@ -12,7 +12,7 @@
 
 function [input_multislice] = JEM2100F_EWRS_setup(model_path, alpha, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%% Argument Parsing %%%%%%%%%%%%%%%%%%%%%%%%
-    default_mode = 'converged';
+    default_mode = "converged";
     default_defocus = 0;
     default_nx = 1024;
     default_ny = 1024;
@@ -24,38 +24,40 @@ function [input_multislice] = JEM2100F_EWRS_setup(model_path, alpha, varargin)
     default_thick_type = 2;
     default_thicknesses = 0;
     default_print_parser = 0;
-    default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
+    default_print_details = 1;
+    default_MULTEM_path = "/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM";
     
     p = inputParser;
     validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-    addRequired(p, 'model_path', @isstring);
-    addRequired(p, 'alpha', validScalarPosNum);
-    addParameter(p, 'mode', default_mode, @isstring);
-    addParameter(p, 'nx', default_nx, validScalarPosNum);
-    addParameter(p, 'ny', default_ny, validScalarPosNum);
-    addParameter(p, 'bwl', default_bwl, validScalarPosNum);
-    addParameter(p, 'x', default_x, validScalarPosNum);
-    addParameter(p, 'y', default_y, validScalarPosNum);
-    addParameter(p, 'E0', default_E0, validScalarPosNum);
-    addParameter(p, 'phonons', default_phonons, validScalarPosNum);
-    addParameter(p, 'thick_type', default_thick_type, validScalarPosNum);
-    addParameter(p, 'thicknesses', default_thicknesses);
-    addParameter(p, 'defocus', default_defocus);
-    addParameter(p, 'print_parser', default_print_parser);
-    addParameter(p, 'MULTEM_path', default_MULTEM_path, @isstring);
+    addRequired(p, "model_path", @isstring);
+    addRequired(p, "alpha", validScalarPosNum);
+    addParameter(p, "mode", default_mode, @isstring);
+    addParameter(p, "nx", default_nx, validScalarPosNum);
+    addParameter(p, "ny", default_ny, validScalarPosNum);
+    addParameter(p, "bwl", default_bwl, validScalarPosNum);
+    addParameter(p, "x", default_x, validScalarPosNum);
+    addParameter(p, "y", default_y, validScalarPosNum);
+    addParameter(p, "E0", default_E0, validScalarPosNum);
+    addParameter(p, "phonons", default_phonons, validScalarPosNum);
+    addParameter(p, "thick_type", default_thick_type, validScalarPosNum);
+    addParameter(p, "thicknesses", default_thicknesses);
+    addParameter(p, "defocus", default_defocus);
+    addParameter(p, "print_parser", default_print_parser);
+    addParameter(p, "print_details", default_print_details);
+    addParameter(p, "MULTEM_path", default_MULTEM_path, @isstring);
     parse(p, model_path, alpha, varargin{:});
     
     if p.Results.print_parser
-        fprintf('Parser:\n')
+        fprintf("Parser:\n")
         disp(p)
 
-        fprintf('Parser results:\n')
+        fprintf("Parser results:\n")
         disp(p.Results)
     end
     
-    addpath(sprintf('%s/crystalline_materials', p.Results.MULTEM_path));
-    addpath(sprintf('%s/matlab_functions', p.Results.MULTEM_path));
-    addpath(sprintf('%s/mex_bin', p.Results.MULTEM_path));
+    addpath(sprintf("%s/crystalline_materials", p.Results.MULTEM_path));
+    addpath(sprintf("%s/matlab_functions", p.Results.MULTEM_path));
+    addpath(sprintf("%s/mex_bin", p.Results.MULTEM_path));
 
     %%%%%%%%%%%%%%%%%% Load multem default parameter %%%%%%%%$$%%%%%%%%%
     input_multislice = multem_default_values();          % Load default values;
@@ -76,7 +78,7 @@ function [input_multislice] = JEM2100F_EWRS_setup(model_path, alpha, varargin)
         input_multislice.spec_cryst_nb = nb;
         input_multislice.spec_cryst_nc = nc;
     catch ME
-        fprintf('Error when setting specimen crystal parameters "na", "nb", and "nc":\n\t%s\nSetting values based on specimen unit cell and simulation cell size. \nNB! only makes sense for cubic crystals with a, b, and c oriented along x, y, and z, respectively.\n', ME.message)
+        fprintf("Error when setting specimen crystal parameters 'na', 'nb', and 'nc':\n\t%s\nSetting values based on specimen unit cell and simulation cell size. \nNB! only makes sense for cubic crystals with a, b, and c oriented along x, y, and z, respectively.\n", ME.message)
         input_multislice.spec_cryst_na = input_multislice.spec_lx / input_multislice.spec_cryst_a;
         input_multislice.spec_cryst_nb = input_multislice.spec_ly / input_multislice.spec_cryst_b;
         input_multislice.spec_cryst_nc = input_multislice.spec_lz / input_multislice.spec_cryst_c;
@@ -143,9 +145,9 @@ function [input_multislice] = JEM2100F_EWRS_setup(model_path, alpha, varargin)
     input_multislice.temporal_spatial_incoh = 1;         % 1: Temporal and Spatial, 2: Temporal, 3: Spatial
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%% Incident wave %%%%%%%%%%%%%%%%%%%%%%%%%%
-    if strcmp(p.Results.mode, 'converged')
+    if strcmp(p.Results.mode, "converged")
         input_multislice.iw_type = 2;                        % 1: Plane_Wave, 2: Convergent_wave, 3:User_Define, 4: auto
-    elseif strcmp(p.Results.mode, 'plane')
+    elseif strcmp(p.Results.mode, "plane")
         input_multislice.iw_type = 1;
     else
         input_multislice.iw_type = 4;
@@ -179,3 +181,7 @@ function [input_multislice] = JEM2100F_EWRS_setup(model_path, alpha, varargin)
     %%%%%%%%% zero defocus reference %%%%%%%%%%%%
     input_multislice.cond_lens_zero_defocus_type = 1;   % eZDT_First = 1, eZDT_User_Define = 2
     input_multislice.cond_lens_zero_defocus_plane = 0;
+    
+    if p.Results.print_details
+        fprintf("Set up MULTEM EWRS simulation with following parameters:\n" + print_simulation_details(input_multislice, "MULTEM_path", p.Results.MULTEM_path))
+    end
