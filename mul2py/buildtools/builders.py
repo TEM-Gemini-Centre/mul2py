@@ -13,11 +13,12 @@ class LoadError(Error):
     pass
 
 
-def set_original_metadata(signal, dictionary, filepath='', simulation_type=''):
+def set_original_metadata(signal, dictionary, filepath='', simulation_type='', elapsed_time=None):
     try:
         signal.original_metadata.add_dictionary({'SimulationParameters': dictionary})
         signal.original_metadata.add_dictionary({'General': {'original_filename': filepath}})
         signal.original_metadata.add_dictionary({'Signal': {'simulation_type': simulation_type}})
+        signal.original_metadata.add_dictionary({'General': {'elapsed_time': elapsed_time}})
     except KeyError as e:
         print(e)
 
@@ -211,6 +212,7 @@ def load_input(input_file):
     hdf_file.remove_excess_dimensions()  # Remove the excess dimensions of all attributes
 
     input_parameters = hdf_file.content2dict()
+    hdf_file.close()
     return input_parameters
 
 
@@ -252,7 +254,90 @@ def load_results(results_file):
     hdf_file = HDFReader(filepath)
     hdf_file.remove_excess_dimensions()
     image_stack = reduce(getattr, ('results', 'images', '_content'), hdf_file)
+    hdf_file.close()
     return hs.signals.Signal2D(image_stack), hdf_file.results
+
+
+def make_signal(filepath):
+    """Loads and makes a HyperSpy signal from a '.ecmat' file"""
+    filepath = Path(filepath)
+    if filepath.suffix == '.ecmat':
+        signal, data = load_results(filepath)
+    else:
+        raise ValueError('File must be a `.ecmat` file, got `{}`'.format(filepath.suffix))
+
+    simulation_type = data.simulation_type()
+
+    try:
+        z = data.thick()
+    except AttributeError:
+        z = data.thicknesses()
+    dx = data.dx()
+    dy = data.dy()
+    # Set axes properties
+    if simulation_type.lower() == 'ewrs':
+        xs = data.xs()
+        ys = data.ys()
+        set_axes(signal, 0, xs, name='x')
+        set_axes(signal, 1, ys, name='y')
+        set_axes(signal, 2, z, name='z')
+        set_axes(signal, 3, dx, name='X')
+        set_axes(signal, 4, dy, name='Y')
+    elif simulation_type == 'scbed' or simulation_type.lower() == 'sped':
+        xs = data.xs()
+        ys = data.ys()
+        set_axes(signal, 0, xs, name='x')
+        set_axes(signal, 1, ys, name='y')
+        set_axes(signal, 2, z, name='z')
+        set_axes(signal, 3, dx, name='kx', units='Å^-1')
+        set_axes(signal, 4, dy, name='ky', units='Å^-1')
+    elif simulation_type.lower() == 'stem':
+        xs = np.linspace(data.input.scanning_x0(), data.input.scanning_xe(), int(data.input.scanning_ns()),
+                         endpoint=data.input.scanning_periodic())
+        ys = np.linspace(data.input.scanning_y0(), data.input.scanning_ye(), int(data.input.scanning_ns()),
+                         endpoint=data.input.scanning_periodic())
+        set_axes(signal, 0, z, name='z')
+        set_axes(signal, 1, 1, name='detector', scale=1, offset=1, units='')
+        set_axes(signal, 2, xs, name='x')
+        set_axes(signal, 3, ys, name='y')
+    elif simulation_type.lower() == 'hrtem':
+        set_axes(signal, 0, z, name='z')
+        set_axes(signal, 1, dx, name='x')
+        set_axes(signal, 2, dy, name='y')
+    elif simulation_type.lower() == 'cbed' or simulation_type.lower() == 'ped':
+        set_axes(signal, 0, z, name='z')
+        set_axes(signal, 1, dx, name='kx', units='Å^-1')
+        set_axes(signal, 2, dy, name='ky', units='Å^-1')
+    else:
+        print('Did not recognize simulation type "{}" as a valid simulation type: Axes are not set.'.format(
+            simulation_type))
+
+    input_parameters = data.input.content2dict()
+
+    try:
+        elapsed_time = data.elapsed_time()
+    except AttributeError:
+        elapsed_time = None
+
+    # Set original metadata
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type=simulation_type,
+                          elapsed_time=elapsed_time)
+
+    # Copy the general metadata
+    signal.metadata.add_dictionary({'General': signal.metadata.General.as_dictionary()})
+
+    # Set important parameters (common for all simulation types)
+    try:
+        set_important_simulation_parameters(signal)
+    except AttributeError as e:
+        print('Could not set general important simulation parameter:\n{err}'.format(err=e))
+    # Set simulation specific parameters
+    try:
+        set_important_simulation_parameters(signal, simulation_type)
+    except AttributeError as e:
+        print(
+            'Could not set important "{sim_type}" simulation parameter:\n{err}'.format(sim_type=simulation_type, err=e))
+    return signal
 
 
 def build_ewrs(filepath, simulation_parameter_file=None):
@@ -262,31 +347,32 @@ def build_ewrs(filepath, simulation_parameter_file=None):
     except AttributeError:
         signal, data = load_results(filepath)
     finally:
-        xs = data.xs.content
-        ys = data.ys.content
+        xs = data.xs()
+        ys = data.ys()
         try:
-            z = data.thick.content
+            z = data.thick()
         except AttributeError:
-            z = data.thicknesses.content
-        dx = data.dx.content
-        dy = data.dy.content
+            z = data.thicknesses()
+        dx = data.dx()
+        dy = data.dy()
 
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
         input_parameters = data.input.content2dict()
 
+    try:
+        elapsed_time = data.elapsed_time()
+    except AttributeError:
+        elapsed_time = None
+
     # Set original metadata
-    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='EWRS')
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='EWRS',
+                          elapsed_time=elapsed_time)
 
-    # Set axes properties
-    set_axes(signal, 0, xs, name='x')
-    set_axes(signal, 1, ys, name='y')
-    set_axes(signal, 2, z, name='z')
-    set_axes(signal, 3, dx, name='X')
-    set_axes(signal, 4, dy, name='Y')
+    # Copy the general metadata
+    signal.metadata.add_dictionary({'General': signal.metadata.General.as_dictionary()})
 
-    # Set metadata
     # Set important parameters (common for all simulation types)
     try:
         set_important_simulation_parameters(signal)
@@ -297,6 +383,13 @@ def build_ewrs(filepath, simulation_parameter_file=None):
         set_important_simulation_parameters(signal, 'ewrs')
     except AttributeError as e:
         print('Could not set important EWRS simulation parameter:\n{err}'.format(err=e))
+
+    # Set axes properties
+    set_axes(signal, 0, xs, name='x')
+    set_axes(signal, 1, ys, name='y')
+    set_axes(signal, 2, z, name='z')
+    set_axes(signal, 3, dx, name='X')
+    set_axes(signal, 4, dy, name='Y')
 
     return signal
 
@@ -309,19 +402,28 @@ def build_cbed(filepath, simulation_parameter_file=None):
         signal, data = load_results(filepath)
     finally:
         try:
-            z = data.thick.content
+            z = data.thick()
         except AttributeError:
-            z = data.thicknesses.content
-        dx = data.dx.content
-        dy = data.dy.content
+            z = data.thicknesses()
+        dx = data.dx()
+        dy = data.dy()
 
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
         input_parameters = data.input.content2dict()
 
+    try:
+        elapsed_time = data.elapsed_time()
+    except AttributeError:
+        elapsed_time = None
+
     # Set original metadata
-    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='CBED')
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='CBED',
+                          elapsed_time=elapsed_time)
+
+    # Copy the general metadata
+    signal.metadata.add_dictionary({'General': signal.metadata.General.as_dictionary()})
 
     # Set important parameters (common for all simulation types)
     try:
@@ -349,22 +451,31 @@ def build_scbed(filepath, simulation_parameter_file=None):
     except AttributeError:
         signal, data = load_results(filepath)
     finally:
-        xs = data.xs.content
-        ys = data.ys.content
+        xs = data.xs()
+        ys = data.ys()
         try:
-            z = data.thick.content
+            z = data.thick()
         except AttributeError:
-            z = data.thicknesses.content
-        dx = data.dx.content
-        dy = data.dy.content
+            z = data.thicknesses()
+        dx = data.dx()
+        dy = data.dy()
 
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
         input_parameters = data.input.content2dict()
 
+    try:
+        elapsed_time = data.elapsed_time()
+    except AttributeError:
+        elapsed_time = None
+
     # Set original metadata
-    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='SCBED')
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='SCBED',
+                          elapsed_time=elapsed_time)
+
+    # Copy the general metadata
+    signal.metadata.add_dictionary({'General': signal.metadata.General.as_dictionary()})
 
     # Set important parameters (common for all simulation types)
     try:
@@ -395,18 +506,28 @@ def build_hrtem(filepath, simulation_parameter_file=None):
         signal, data = load_results(filepath)
     finally:
         try:
-            z = data.thick.content
+            z = data.thick()
         except AttributeError:
-            z = data.thicknesses.content
-        dx = data.dx.content
-        dy = data.dy.content
+            z = data.thicknesses()
+        dx = data.dx()
+        dy = data.dy()
 
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
         input_parameters = data.input.content2dict()
 
-    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='HRTEM')
+    try:
+        elapsed_time = data.elapsed_time()
+    except AttributeError:
+        elapsed_time = None
+
+    # Set original metadata
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='HRTEM',
+                          elapsed_time=elapsed_time)
+
+    # Copy the general metadata
+    signal.metadata.add_dictionary({'General': signal.metadata.General.as_dictionary()})
 
     # Set important parameters (common for all simulation types)
     try:
@@ -435,20 +556,31 @@ def build_stem(filepath, simulation_parameter_file=None):
         signal, data = load_results(filepath)
     finally:
         try:
-            z = data.thick.content
+            z = data.thick()
         except AttributeError:
-            z = data.thicknesses.content
+            z = data.thicknesses()
 
-        xs = np.linspace(data.scanning_x0, data.scanning_xe, data.scanning_ns, endpoint=data.scanning_periodic.content)
-        ys = np.linspace(data.scanning_y0, data.scanning_ye, data.scanning_ns, endpoint=data.scanning_periodic.content)
+        xs = np.linspace(data.input.scanning_x0(), data.input.scanning_xe(), int(data.input.scanning_ns()),
+                         endpoint=data.input.scanning_periodic())
+        ys = np.linspace(data.input.scanning_y0(), data.input.scanning_ye(), int(data.input.scanning_ns()),
+                         endpoint=data.input.scanning_periodic())
 
     if simulation_parameter_file is not None:
         input_parameters = load_input(simulation_parameter_file)
     else:
         input_parameters = data.input.content2dict()
 
+    try:
+        elapsed_time = data.elapsed_time()
+    except AttributeError:
+        elapsed_time = None
+
     # Set original metadata
-    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='STEM')
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='STEM',
+                          elapsed_time=elapsed_time)
+
+    # Copy the general metadata
+    signal.metadata.add_dictionary({'General': signal.metadata.General.as_dictionary()})
 
     # Set important parameters (common for all simulation types)
     try:
@@ -463,8 +595,9 @@ def build_stem(filepath, simulation_parameter_file=None):
 
     # Set axes properties
     set_axes(signal, 0, z, name='z')
-    set_axes(signal, 1, xs, name='x')
-    set_axes(signal, 2, ys, name='y')
+    set_axes(signal, 1, 1, name='detector', scale=1, offset=1, units='')
+    set_axes(signal, 2, xs, name='x')
+    set_axes(signal, 3, ys, name='y')
 
     return signal
 

@@ -1,19 +1,52 @@
-%% Configure simulation devices
-system_conf.precision = 1;                           % eP_Float = 1, eP_double = 2
-system_conf.device = 1;                              % eD_CPU = 1, eD_GPU = 2
-system_conf.cpu_nthread = 16;                         % Number of tasks (?)
+%%
+clear all
+clc
+%% System configuration
+gpu = true;
+if gpu
+    system_conf.precision = 1;                           % eP_Float = 1, eP_double = 2
+    system_conf.device = 2;                              % eD_CPU = 1, eD_GPU = 2
+    system_conf.cpu_nthread = 5; 			 % Does the number of CPU threads matter when running on GPU? EXPERIMENT!!
+    system_conf.gpu_device = 1;				 % MULTEM can only use one GPU device at the time? Only ask for a single GPU from IDUN, and use this.
+else
+    system_conf.precision = 1;                           % eP_Float = 1, eP_double = 2
+    system_conf.device = 1;                              % eD_CPU = 1, eD_GPU = 2
+    system_conf.cpu_nthread = 4; 
+    system_conf.gpu_device = 0;
+end
 
+%% Timestamp
+start_time = datetime('now','TimeZone','local');
+fprintf("Starting simulation script at %s\n", start_time);
+
+%% output_details
+simulation_name = "SCBED_test";
+output_path = ".";
+mkdir(output_path);
 
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
-input_multislice = JEM2100F_CBED_setup("test_model_L_10x10x20.mat", 7.5, "nx", 256, "ny", 256, "multem_path", "C:\Program Files\MULTEM\MULTEM_binary");
+input_multislice = CBED_setup("test_model_L_10x10x20.mat", 7.5, "nx", 8, "ny", 16, "instrument", "2100F", "multem_path", "C:\Program Files\MULTEM\MULTEM_binary");
 original_input = input_multislice;
 
 %% Set up scan pattern
-%Scan one unit cell centered in the middle of the cell with 1/4 unit cell resolution
 centre_x = original_input.spec_lx/2;
 centre_y = original_input.spec_ly/2;
-xs = (centre_x - original_input.spec_cryst_a/2 : original_input.spec_cryst_a/4 : centre_x + original_input.spec_cryst_a/2);
-ys = (centre_y - original_input.spec_cryst_b/2 : original_input.spec_cryst_b/4 : centre_y + original_input.spec_cryst_b/2);
+
+scanning_width = original_input.spec_cryst_a;
+scanning_height = original_input.spec_cryst_b;
+
+scanning_ns_x = 2;
+scanning_ns_y = 3;
+
+x0 = centre_x - scanning_width/2;
+y0 = centre_y - scanning_height/2;
+
+xe = x0 + scanning_width;
+ye = x0 + scanning_height;
+
+
+xs = linspace(x0, xe, scanning_ns_x);
+ys = linspace(y0, ye, scanning_ns_y);
 
 %% Loop through x and y positions
 
@@ -37,12 +70,11 @@ for i = 1:size(results.xs, 2)
         file_path = sprintf("%s/%s", results_path, file_name);
 
         %Run simulation
-        clear il_MULTEM;
         fprintf("Simulating CBED stack %i of %i: (x,y) = (%f,%f)\r", counter, size(xs, 2)*size(ys, 2), input_multislice.iw_x, input_multislice.iw_y);
+        clear il_MULTEM;
         tic;
         output_multislice = il_MULTEM(system_conf, input_multislice); 
         toc;
-
         results.thicknesses{i, j} = output_multislice.thick;
         try
             for t = 1:length(output_multislice.data)
@@ -58,7 +90,17 @@ for i = 1:size(results.xs, 2)
         counter=counter+1;
     end
 end
+
+%% Set some additional details
+results.thick = output_multislice.thick;
 results.dx = output_multislice.dx;
 results.dy = output_multislice.dy;
 
-save("scbed_test_results.ecmat", "results", "-v7.3");
+results.simulation_type = "SCBED"; %This will be used by mul2py to decide how to construct HyperSpy signals
+
+end_time = datetime('now','TimeZone','local');
+fprintf("Simulation finished at %s\n", end_time);
+results.elapsed_time = seconds(end_time - start_time);
+
+%% Save the data
+save(sprintf("%s/%s_results.ecmat", output_path, simulation_name), "results", "-v7.3");

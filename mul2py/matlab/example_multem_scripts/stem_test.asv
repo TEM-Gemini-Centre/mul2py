@@ -3,6 +3,8 @@ clear all
 clc
 %% System configuration
 gpu = true;
+
+%%%%%%%%%%%%%%%%%%%%% Set system configuration %%%%%%%%%%%%%%%%%%%%%
 if gpu
     system_conf.precision = 1;                           % eP_Float = 1, eP_double = 2
     system_conf.device = 2;                              % eD_CPU = 1, eD_GPU = 2
@@ -15,30 +17,19 @@ else
     system_conf.gpu_device = 0;
 end
 
-%% Timestamp
-start_time = datetime('now','TimeZone','local');
-fprintf("Starting simulation script at %s\n", start_time);
-
-%% output_details
-simulation_name = "STEM_test";
-output_path = ".";
-mkdir(output_path);
-
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
 clear collection_angles
-collection_angles(1).inner_ang = 0; %semi-angle (mrad)
-collection_angles(1).outer_ang = 40; %semi-angle (mrad)
-collection_angles(2).inner_ang = 48; %semi-angle (mrad)
-collection_angles(2).outer_ang = 200; %semi-angle (mrad)
+collection_angles(1).inner_ang = 0; %mrad
+collection_angles(1).outer_ang = 40; %mrad
+collection_angles(2).inner_ang = 48; %mrad
+collection_angles(2).outer_ang = 200; %mrad
 
-convergence_angle = 27; %semi-angle (mrad)
+convergence_angle = 15; %mrad
 
-%input_multislice = STEM_setup("test_model_L_10x10x20.mat", convergence_angle, collection_angles, "phonons", 1, "nx", 8, "ny", 16, "instrument", "ARM200F");
-input_multislice = STEM_setup("test_model_L_10x10x20.mat", convergence_angle, collection_angles, "phonons", 1, "nx", 8, "ny", 16, "instrument", "ARM200F", "multem_path", "C:\Program Files\MULTEM\MULTEM_binary");
+input_multislice = STEM_setup("test_model_L_10x10x20.mat", convergence_angle, collection_angles, "nx", 1024, "ny", 1024, "instrument", "ARM200F");
 input_multislice.scanning_ns = 3;
 
-%% If you want to adjust scan parameters (default is 10 pixels spanning around the center of the model with a step a/10 in x and b/10 in y:
-%You can also change the scanning parameters in the call to STEM_setup()
+%% If you want to adjust scan parameters (default is 10 pixels spanning around the center of the model with a step a/10 in x and b/10 in y.
 %input_multislice.scanning_x0 = input_multislice.spec_lx/2 - input_multislice.spec_cryst_a/2;
 %input_multislice.scanning_xe = input_multislice.spec_lx/2 + input_multislice.spec_cryst_a/2;
 
@@ -49,6 +40,8 @@ input_multislice.scanning_ns = 3;
 results.input = input_multislice;
 
 %% Run simulation
+time_print = 'Started ' + string(datetime('now','TimeZone','local','Format','HH:mm:ss'));
+disp(time_print)
 clear il_MULTEM;
 tic;
 output_multislice = il_MULTEM(system_conf, input_multislice); 
@@ -66,16 +59,8 @@ for t = 1:n_t
     end
 end
 
-%% Set some additional details
 results.thick = output_multislice.thick;
 results.dx = output_multislice.dx;
 results.dy = output_multislice.dy;
 
-results.simulation_type = "STEM"; %This will be used by mul2py to decide how to construct HyperSpy signals
-
-end_time = datetime('now','TimeZone','local');
-fprintf("Simulation finished at %s\n", end_time);
-results.elapsed_time = seconds(end_time - start_time);
-
-%% Save the data
-save(sprintf("%s/%s_results.ecmat", output_path, simulation_name), "results", "-v7.3");
+save("stem_test_results.ecmat", "results", "-v7.3");

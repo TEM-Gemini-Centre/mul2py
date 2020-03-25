@@ -21,6 +21,12 @@ function [details] = print_simulation_details(input_multislice, varargin)
     addpath(sprintf("%s/matlab_functions", p.Results.MULTEM_path));
     addpath(sprintf("%s/mex_bin", p.Results.MULTEM_path));
     
+    %% Specimen:
+    details = details + sprintf("Specimen dimensions:\n\tLx: %d Å\n\tLy: %d Å\n\tLz: %d Å\n", input_multislice.spec_lx, input_multislice.spec_ly, input_multislice.spec_lz);
+    
+    %% Slicing:
+    details = details + sprintf("Slice thickness: %d Å\nSlices: %i\nStart: %d Å\nStop: %d Å\n", input_multislice.spec_dz, length(input_multislice.thick), input_multislice.thick(1), input_multislice.thick(end));
+    
     %% Wavelength
     emass = 510.99906;		% electron rest mass in keV
     hc = 12.3984244;		% Planck's const x speed of light	
@@ -38,12 +44,14 @@ function [details] = print_simulation_details(input_multislice, varargin)
     %% Potential resolution
     dx = input_multislice.spec_lx / input_multislice.nx;
     dy = input_multislice.spec_ly / input_multislice.ny;
-    details = details +sprintf("Potential resolution:\n\tx: %d Å \n\ty: %d Å\n", dx, dy);
+    details = details +sprintf("Potential resolution (%i, %i):\n\tx: %d Å \n\ty: %d Å\n", input_multislice.nx, input_multislice.ny, dx, dy);
     
     %% Reciprocal resolution
     dkx = 1 / input_multislice.spec_lx;
     dky = 1 / input_multislice.spec_ly;
-    details = details +sprintf("Reciprocal resolution:\n\tx: %d 1/Å \n\ty: %d 1/Å\n", dkx, dky);
+    dax = rAng_2_mrad(dkx, input_multislice.E_0);
+    day = rAng_2_mrad(dky, input_multislice.E_0);
+    details = details +sprintf("Reciprocal resolution:\n\tx: %d mrad (%d 1/Å) \n\ty: %d mrad (%d 1/Å)\n", dax, dkx, day, dky);
     
     %% Maximum scattering angles
     %Maximum scattering vectors
@@ -53,4 +61,5 @@ function [details] = print_simulation_details(input_multislice, varargin)
     max_scattering_angle_x = rAng_2_mrad(kx_max, input_multislice.E_0);
     max_scattering_angle_y = rAng_2_mrad(ky_max, input_multislice.E_0);
     details = details + sprintf("Maximum scattering angles:\n\tx: %d mrad (%d 1/Å)\n\ty: %d mrad (%d 1/Å)\n", max_scattering_angle_x, kx_max, max_scattering_angle_y, ky_max);    
+    
     

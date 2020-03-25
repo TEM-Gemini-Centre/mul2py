@@ -10,7 +10,7 @@
 % 
 % Copyright 2017 Ivan Lobato <Ivanlh20@gmail.com>
 
-function [input_multislice] = JEM2100F_HRTEM_setup(model_path, varargin)
+function [input_multislice] = HRTEM_setup(model_path, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%% Argument Parsing %%%%%%%%%%%%%%%%%%%%%%%%
     default_mode = "converged";
     default_defocus = nan;
@@ -21,6 +21,7 @@ function [input_multislice] = JEM2100F_HRTEM_setup(model_path, varargin)
     default_phonons = 20;
     default_thick_type = 2;
     default_thicknesses = 0;
+    default_instrument = "";
     default_print_parser = 0;
     default_print_details = 1;
     default_MULTEM_path = "/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM";
@@ -37,6 +38,7 @@ function [input_multislice] = JEM2100F_HRTEM_setup(model_path, varargin)
     addParameter(p, "thick_type", default_thick_type, validScalarPosNum);
     addParameter(p, "thicknesses", default_thicknesses);
     addParameter(p, "defocus", default_defocus);
+    addParameter(p, 'instrument', default_instrument, @isstring);
     addParameter(p, "print_parser", default_print_parser);
     addParameter(p, "print_details", default_print_details);
     addParameter(p, "MULTEM_path", default_MULTEM_path, @isstring);
@@ -84,7 +86,7 @@ function [input_multislice] = JEM2100F_HRTEM_setup(model_path, varargin)
     if p.Results.thick_type == 2
         if length(p.Results.thicknesses) == 1
             if p.Results.thicknesses == 0 %Use the slice thicknesses
-                input_multislice.thick = (0:input_multislice.spec_dz:input_multislice.spec_lz+input_multislice.spec_dz);
+                input_multislice.thick = (0:input_multislice.spec_dz:input_multislice.spec_lz-input_multislice.spec_dz);
             else %use the provided thickness
                 input_multislice.thick = p.Results.thicknesses;
             end
@@ -129,15 +131,59 @@ function [input_multislice] = JEM2100F_HRTEM_setup(model_path, varargin)
 
     %%%%%%%%%%%%%%%%%%%%%%%% Objective lens %%%%%%%%%%%%%%%%%%%%%%%%
     input_multislice.obj_lens_m = 0;                   % Vortex momentum
-    input_multislice.obj_lens_c_10 = 0;               % Defocus (Å)
-    input_multislice.obj_lens_c_30 = 1.;             % Third order spherical aberration (mm)
-    input_multislice.obj_lens_c_50 = 0.00;             % Fifth order spherical aberration (mm)
-    input_multislice.obj_lens_c_12 = 0.0;              % Twofold astigmatism (Å)
-    input_multislice.obj_lens_phi_12 = 0.0;            % Azimuthal angle of the twofold astigmatism (º)
-    input_multislice.obj_lens_c_23 = 0.0;              % Threefold astigmatism (Å)
-    input_multislice.obj_lens_phi_23 = 0.0;            % Azimuthal angle of the threefold astigmatism (º)
+    
     input_multislice.obj_lens_inner_aper_ang = 0.0;    % Inner aperture (mrad) 
     input_multislice.obj_lens_outer_aper_ang = 0.0;    % Outer aperture (mrad)
+    
+    % Set aberrations
+    if strcmp(p.Results.instrument, "")
+        aberrations = nan;
+    elseif strcmp(p.Results.instrument, "ARM200F")
+        aberrations = ARM200F_aberrations();
+    elseif strcmp(p.Results.instrument, "2100F")
+        aberrations = JEM2100F_aberrations();
+    else
+        fprintf("Could not understand instrument %s, using default aberrations", p.Results.instrument);
+        aberrations = nan;
+    end
+    
+    if isstruct(aberrations)
+        input_multislice.obj_lens_c_10 = p.Results.defocus;                                  % [C1]      Defocus (Å)
+    
+        input_multislice.obj_lens_c_12 = aberrations.obj_lens_c_12;                         % [A1]      2-fold astigmatism (Å)
+        input_multislice.obj_lens_c_phi_12 = aberrations.obj_lens_phi_12;                   % [phi_A1]	Azimuthal angle of 2-fold astigmatism (deg)
+
+        input_multislice.obj_lens_c_21 = aberrations.obj_lens_c_21;                         % [B2]      Axial coma (Å)
+        input_multislice.obj_lens_c_phi_21 = aberrations.obj_lens_phi_21;                   % [phi_B2]	Azimuthal angle of axial coma (deg)
+
+        input_multislice.obj_lens_c_23 = aberrations.obj_lens_c_23;                         % [A2]      3-fold astigmatism (Å)
+        input_multislice.obj_lens_c_phi_23 = aberrations.obj_lens_phi_23;                   % [phi_A2]	Azimuthal angle of 3-fold astigmatism (deg)
+
+        input_multislice.obj_lens_c_30 = aberrations.obj_lens_c_30;                         % [C3] 		3rd order spherical aberration (mm)
+
+        input_multislice.obj_lens_c_32 = aberrations.obj_lens_c_32;                         % [S3]      Axial star aberration (Å)
+        input_multislice.obj_lens_c_phi_32 = aberrations.obj_lens_phi_32;                   % [phi_S3]	Azimuthal angle of axial star aberration (deg)
+
+        input_multislice.obj_lens_c_34 = aberrations.obj_lens_c_34;                         % [A3]      4-fold astigmatism (Å)
+        input_multislice.obj_lens_c_phi_34 = aberrations.obj_lens_phi_34;                   % [phi_A3]	Azimuthal angle of 4-fold astigmatism (deg)
+
+        input_multislice.obj_lens_c_41 = aberrations.obj_lens_c_41;                         % [B4]      4th order axial coma (Å)
+        input_multislice.obj_lens_c_phi_41 = aberrations.obj_lens_phi_41;                   % [phi_B4]	Azimuthal angle of 4th order axial coma (deg)
+
+        input_multislice.obj_lens_c_43 = aberrations.obj_lens_c_43;                         % [D4]      3-lobe aberration (Å)
+        input_multislice.obj_lens_c_phi_43 = aberrations.obj_lens_phi_43;                   % [phi_D4]	Azimuthal angle of 3-lobe aberration (deg)
+
+        input_multislice.obj_lens_c_45 = aberrations.obj_lens_c_45;                         % [A4]      5-fold astigmatism (Å)
+        input_multislice.obj_lens_c_phi_45 = aberrations.obj_lens_phi_45;                   % [phi_A4]	Azimuthal angle of 5-fold astigmatism (deg)
+
+        input_multislice.obj_lens_c_50 = aberrations.obj_lens_c_50;                         % [C5]      5th order spherical aberration (mm)
+        input_multislice.obj_lens_c_52 = aberrations.obj_lens_c_52;                         % [S5]      5th order axial star aberration (?)
+        input_multislice.obj_lens_c_phi_52 = aberrations.obj_lens_phi_52;                   % [phi_S5]	Azimuthal angle of 5th order axial star aberration (?)
+        input_multislice.obj_lens_c_54 = aberrations.obj_lens_c_54;                         % [R5]      5th order rosette aberration (?)
+        input_multislice.obj_lens_c_phi_54 = aberrations.obj_lens_phi_54;                   % [phi_R5]	Azimuthal angle of 5th order rosette aberration (?)
+        input_multislice.obj_lens_c_56 = aberrations.obj_lens_c_56;                         % [A5]      6-fold astigmatism (?)
+        input_multislice.obj_lens_c_phi_56 = aberrations.obj_lens_phi_56;                   % [phi_A5]	Azimuthal angle of 6-fold astigmatism (?)
+    end
     
     if isnan(p.Results.defocus)
     	defocus = il_scherzer_defocus(input_multislice.E_0, input_multislice.obj_lens_c_30);
@@ -161,5 +207,5 @@ function [input_multislice] = JEM2100F_HRTEM_setup(model_path, varargin)
     input_multislice.cond_lens_ssf_npoints = 4;         % # of integration points. It will be only used if illumination_model=4
     
     if p.Results.print_details
-        fprintf("Set up MULTEM HRTEM simulation with following parameters:\n" + print_simulation_details(input_multislice, "MULTEM_path", p.Results.MULTEM_path))
+        fprintf("**** Set up MULTEM HRTEM simulation for instrument '%s' ****\n\n%s\n", p.Results.instrument, print_simulation_details(input_multislice, "MULTEM_path", p.Results.MULTEM_path))
     end
