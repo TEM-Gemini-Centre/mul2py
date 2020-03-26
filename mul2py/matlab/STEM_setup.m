@@ -36,7 +36,7 @@ function [input_multislice] = STEM_setup(model_path, alpha, collection_angles, v
     validScalarNum = @(x) isnumeric(x) && isscalar(x);
     validStrChar = @(x) ischar(x) || isstring(x);
     
-    addRequired(p, "model_path", validScalarPosNum);
+    addRequired(p, "model_path", validStrChar);
     addRequired(p, "alpha", validScalarPosNum);
     addRequired(p, "collection_angles", @isstruct)
     addParameter(p, "nx", default_nx, validScalarPosNum);
