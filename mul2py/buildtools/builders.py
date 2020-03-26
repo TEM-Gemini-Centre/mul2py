@@ -19,9 +19,9 @@ def set_original_metadata(signal, dictionary, filepath='', simulation_type='', e
         signal.original_metadata.add_dictionary({'SimulationParameters': dictionary})
         signal.original_metadata.add_dictionary({
             'General': {
-                'original_filename': filepath,
+                'original_filename': str(filepath),
                 'elapsed_time': elapsed_time,
-                'title': filepath.stem
+                'title': str(filepath.stem)
             }
         })
         signal.original_metadata.add_dictionary({'Signal': {'simulation_type': simulation_type}})
