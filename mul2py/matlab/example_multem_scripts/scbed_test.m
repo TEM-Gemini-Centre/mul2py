@@ -25,7 +25,7 @@ output_path = ".";
 mkdir(output_path);
 
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
-input_multislice = CBED_setup("test_model_L_10x10x20.mat", 7.5, "nx", 8, "ny", 16, "instrument", "2100F", "multem_path", "C:\Program Files\MULTEM\MULTEM_binary");
+input_multislice = CBED_setup("test_model_L_10x10x20.mat", 7.5, "phonons", 1, "nx", 8, "ny", 16, "instrument", "2100F", "multem_path", "C:\Program Files\MULTEM\MULTEM_binary");
 original_input = input_multislice;
 
 %% Set up scan pattern
@@ -65,9 +65,6 @@ for i = 1:size(results.xs, 2)
         input_multislice = original_input;
         input_multislice.iw_x = x;
         input_multislice.iw_y = y;
-        
-        file_name = sprintf("%s_%i_%i", result_name, i, j);
-        file_path = sprintf("%s/%s", results_path, file_name);
 
         %Run simulation
         fprintf("Simulating CBED stack %i of %i: (x,y) = (%f,%f)\r", counter, size(xs, 2)*size(ys, 2), input_multislice.iw_x, input_multislice.iw_y);
@@ -82,8 +79,8 @@ for i = 1:size(results.xs, 2)
             end
         catch ME
             fprintf("Exception for i=%i, j=%i, and t=%i. Data size: (%s)", i, j, t, strip(sprintf("%i,", size(output_multislice.data)), "right", ","));
-            save(sprintf("%s/%s_output.mat", results_path, file_name), "output_multislice", "-v7.3");
-            save(sprintf("%s/%s_results.mat", results_path, result_name), "results", "-v7.3");
+            save(sprintf("%s/%s_output.mat", results_path, simulation_name), "output_multislice", "-v7.3");
+            save(sprintf("%s/%s_results.mat", results_path, simulation_name), "results", "-v7.3");
             rethrow(ME)
         end
         

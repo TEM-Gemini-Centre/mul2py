@@ -14,11 +14,17 @@ class LoadError(Error):
 
 
 def set_original_metadata(signal, dictionary, filepath='', simulation_type='', elapsed_time=None):
+    filepath = Path(filepath)
     try:
         signal.original_metadata.add_dictionary({'SimulationParameters': dictionary})
-        signal.original_metadata.add_dictionary({'General': {'original_filename': filepath}})
+        signal.original_metadata.add_dictionary({
+            'General': {
+                'original_filename': filepath,
+                'elapsed_time': elapsed_time,
+                'title': filepath.stem
+            }
+        })
         signal.original_metadata.add_dictionary({'Signal': {'simulation_type': simulation_type}})
-        signal.original_metadata.add_dictionary({'General': {'elapsed_time': elapsed_time}})
     except KeyError as e:
         print(e)
 
@@ -260,13 +266,42 @@ def load_results(results_file):
 
 def make_signal(filepath):
     """Loads and makes a HyperSpy signal from a '.ecmat' file"""
+    _simulation_types = {
+        11: 'STEM',
+        12: 'ISTEM',
+        21: 'CBED',
+        22: 'CBEI',
+        31: 'ED',
+        32: 'HRTEM',
+        41: 'PED',
+        42: 'HCTEM',
+        51: 'EWFS',
+        52: 'EWRS',
+        61: 'EELS',
+        62: 'EFTEM',
+        71: 'ProbeFS',
+        72: 'ProbeRS',
+        81: 'PPFS',
+        82: 'PPRS',
+        91: 'TFFS',
+        92: 'TFRS'
+    }
     filepath = Path(filepath)
     if filepath.suffix == '.ecmat':
         signal, data = load_results(filepath)
     else:
         raise ValueError('File must be a `.ecmat` file, got `{}`'.format(filepath.suffix))
 
-    simulation_type = data.simulation_type()
+    # Get the simulation type
+    try:
+        simulation_type = data.simulation_type().lower()
+    except AttributeError:
+        try:
+            simulation_type = _simulation_types[int(data.input.simulation_type())].lower()
+        except KeyError as e:
+            print('No simulation type for simulation key "{sim_type}":\n{err}'.format(
+                sim_type=data.input.simulation_type(), err=e))
+    simulation_dimension = len(np.shape(signal))
 
     try:
         z = data.thick()
@@ -274,8 +309,9 @@ def make_signal(filepath):
         z = data.thicknesses()
     dx = data.dx()
     dy = data.dy()
+
     # Set axes properties
-    if simulation_type.lower() == 'ewrs':
+    if simulation_type == 'ewrs' and simulation_dimension == 5:
         xs = data.xs()
         ys = data.ys()
         set_axes(signal, 0, xs, name='x')
@@ -283,7 +319,7 @@ def make_signal(filepath):
         set_axes(signal, 2, z, name='z')
         set_axes(signal, 3, dx, name='X')
         set_axes(signal, 4, dy, name='Y')
-    elif simulation_type == 'scbed' or simulation_type.lower() == 'sped':
+    elif (simulation_type == 'cbed' or simulation_type == 'ped') and simulation_dimension == 5:
         xs = data.xs()
         ys = data.ys()
         set_axes(signal, 0, xs, name='x')
@@ -291,7 +327,7 @@ def make_signal(filepath):
         set_axes(signal, 2, z, name='z')
         set_axes(signal, 3, dx, name='kx', units='Å^-1')
         set_axes(signal, 4, dy, name='ky', units='Å^-1')
-    elif simulation_type.lower() == 'stem':
+    elif simulation_type == 'stem' and simulation_dimension == 4:
         xs = np.linspace(data.input.scanning_x0(), data.input.scanning_xe(), int(data.input.scanning_ns()),
                          endpoint=data.input.scanning_periodic())
         ys = np.linspace(data.input.scanning_y0(), data.input.scanning_ye(), int(data.input.scanning_ns()),
@@ -300,11 +336,11 @@ def make_signal(filepath):
         set_axes(signal, 1, 1, name='detector', scale=1, offset=1, units='')
         set_axes(signal, 2, xs, name='x')
         set_axes(signal, 3, ys, name='y')
-    elif simulation_type.lower() == 'hrtem':
+    elif simulation_type == 'hrtem' and simulation_dimension == 3:
         set_axes(signal, 0, z, name='z')
         set_axes(signal, 1, dx, name='x')
         set_axes(signal, 2, dy, name='y')
-    elif simulation_type.lower() == 'cbed' or simulation_type.lower() == 'ped':
+    elif (simulation_type == 'cbed' or simulation_type == 'ped') and simulation_dimension == 3:
         set_axes(signal, 0, z, name='z')
         set_axes(signal, 1, dx, name='kx', units='Å^-1')
         set_axes(signal, 2, dy, name='ky', units='Å^-1')
@@ -324,7 +360,7 @@ def make_signal(filepath):
                           elapsed_time=elapsed_time)
 
     # Copy the general metadata
-    signal.metadata.add_dictionary({'General': signal.metadata.General.as_dictionary()})
+    signal.metadata.add_dictionary({'General': signal.original_metadata.General.as_dictionary()})
 
     # Set important parameters (common for all simulation types)
     try:
