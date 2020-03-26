@@ -29,18 +29,21 @@ function [input_multislice] = STEM_setup(model_path, alpha, collection_angles, v
     default_instrument = "";
     default_print_parser = 0;
     default_print_details = 1;
-    default_MULTEM_path = "/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM";
+    default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
     
     p = inputParser;
-    validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-    addRequired(p, "model_path", @isstring);
+    validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
+    validScalarNum = @(x) isnumeric(x) && isscalar(x);
+    validStrChar = @(x) ischar(x) || isstring(x);
+    
+    addRequired(p, "model_path", validScalarPosNum);
     addRequired(p, "alpha", validScalarPosNum);
     addRequired(p, "collection_angles", @isstruct)
     addParameter(p, "nx", default_nx, validScalarPosNum);
     addParameter(p, "ny", default_ny, validScalarPosNum);
     addParameter(p, "bwl", default_bwl, validScalarPosNum);
-    addParameter(p, "center_x", default_center_x, validScalarPosNum);
-    addParameter(p, "center_y", default_center_y, validScalarPosNum);
+    addParameter(p, "center_x", default_center_x, validScalarNum);
+    addParameter(p, "center_y", default_center_y, validScalarNum);
     addParameter(p, "scan_width", default_scan_width, validScalarPosNum);
     addParameter(p, "scan_height", default_scan_height, validScalarPosNum);
     addParameter(p, "scanning_ns", default_scanning_ns, validScalarPosNum);
@@ -48,11 +51,11 @@ function [input_multislice] = STEM_setup(model_path, alpha, collection_angles, v
     addParameter(p, "phonons", default_phonons, validScalarPosNum);
     addParameter(p, "thick_type", default_thick_type, validScalarPosNum);
     addParameter(p, "thicknesses", default_thicknesses);
-    addParameter(p, "defocus", default_defocus);
-    addParameter(p, 'instrument', default_instrument, @isstring);
-    addParameter(p, "print_parser", default_print_parser);
-    addParameter(p, "print_details", default_print_details);
-    addParameter(p, "MULTEM_path", default_MULTEM_path, @isstring);
+    addParameter(p, "defocus", default_defocus, validScalarNum);
+    addParameter(p, "instrument", default_instrument, validStrChar);
+    addParameter(p, "print_parser", default_print_parser, validScalarPosNum);
+    addParameter(p, "print_details", default_print_details, validScalarPosNum);
+    addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
     parse(p, model_path, alpha, collection_angles, varargin{:});
     
     if p.Results.print_parser
@@ -63,9 +66,9 @@ function [input_multislice] = STEM_setup(model_path, alpha, collection_angles, v
         disp(p.Results)
     end
     
-    addpath(sprintf("%s/crystalline_materials", p.Results.MULTEM_path));
-    addpath(sprintf("%s/matlab_functions", p.Results.MULTEM_path));
-    addpath(sprintf("%s/mex_bin", p.Results.MULTEM_path));
+    addpath(char(sprintf("%s/crystalline_materials", p.Results.MULTEM_path)));
+    addpath(char(sprintf("%s/matlab_functions", p.Results.MULTEM_path)));
+    addpath(char(sprintf("%s/mex_bin", p.Results.MULTEM_path)));
     
     
     %%%%%%%%%%%%%%%%%% Load multem default parameter %%%%%%%%$$%%%%%%%%%

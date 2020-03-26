@@ -1,12 +1,15 @@
 function [details] = print_simulation_details(input_multislice, varargin)
     details = "";
-    default_MULTEM_path = "/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM";
+    default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
     default_print_parser = 0;
+    
+    validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && x>=0;
+    validStrChar = @(x) ischar(x) || isstring(x);
     
     p = inputParser;
     addRequired(p, "input_multislice", @isstruct);
-    addParameter(p, "print_parser", default_print_parser);
-    addParameter(p, "MULTEM_path", default_MULTEM_path, @isstring);
+    addParameter(p, "print_parser", default_print_parser, validScalarPosNum);
+    addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
     parse(p, input_multislice, varargin{:});
     
     if p.Results.print_parser
@@ -17,9 +20,9 @@ function [details] = print_simulation_details(input_multislice, varargin)
         disp(p.Results)
     end
     
-    addpath(sprintf("%s/crystalline_materials", p.Results.MULTEM_path));
-    addpath(sprintf("%s/matlab_functions", p.Results.MULTEM_path));
-    addpath(sprintf("%s/mex_bin", p.Results.MULTEM_path));
+    addpath(char(sprintf("%s/crystalline_materials", p.Results.MULTEM_path)));
+    addpath(char(sprintf("%s/matlab_functions", p.Results.MULTEM_path)));
+    addpath(char(sprintf("%s/mex_bin", p.Results.MULTEM_path)));
     
     %% Specimen:
     details = details + sprintf("Specimen dimensions:\n\tLx: %d Å\n\tLy: %d Å\n\tLz: %d Å\n", input_multislice.spec_lx, input_multislice.spec_ly, input_multislice.spec_lz);
