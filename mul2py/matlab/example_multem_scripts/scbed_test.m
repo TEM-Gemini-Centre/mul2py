@@ -27,6 +27,7 @@ mkdir(output_path);
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
 input_multislice = CBED_setup("test_model_L_10x10x20.mat", 7.5, "phonons", 1, "nx", 8, "ny", 16, "instrument", "2100F", "multem_path", "C:\Program Files\MULTEM\MULTEM_binary");
 original_input = input_multislice;
+results.system = system_conf;
 
 %% Set up scan pattern
 centre_x = original_input.spec_lx/2;

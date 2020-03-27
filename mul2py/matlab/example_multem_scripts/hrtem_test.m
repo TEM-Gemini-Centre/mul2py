@@ -27,6 +27,7 @@ mkdir(output_path);
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
 input_multislice = HRTEM_setup("test_model_L_10x10x20.mat", "nx", 8, "ny", 16, "instrument", "2100F", "multem_path", "C:\Program Files\MULTEM\MULTEM_binary");
 original_input = input_multislice;
+results.system = system_conf;
 
 %% Create results struct
 results.input = input_multislice;

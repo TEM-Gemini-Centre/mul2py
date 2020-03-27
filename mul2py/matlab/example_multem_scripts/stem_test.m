@@ -47,6 +47,7 @@ input_multislice.scanning_ns = 3;
 
 %% Store input parameters in results struct
 results.input = input_multislice;
+results.system = system_conf;
 
 %% Run simulation
 clear il_MULTEM;
