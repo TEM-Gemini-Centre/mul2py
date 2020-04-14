@@ -12,7 +12,11 @@ This is a python package for converting [MULTEM](https://github.com/Ivanlh20/MUL
     - [3.2 Making annotated images and movies](#32-making-images-and-movies)
   - [4 Commandline conversion](#4-commandline-results-conversion)
   - [5 The easy-mat format](#5-the-easy-mat-format)
-    - [5.1 Example](#51-matlab-multem-example)
+    - [5.1 Easy-mat example](#51-matlab-multem-example)
+  - [6 Examples](#6-examples)
+    - [6.1 Example model script](#61-making-a-model)
+    - [6.2 Example STEM script](#62-stem-simulation-script)
+    - [6.3 Example SLURM job](#63-slurm-job-script)
 
 ## 1 Disclaimer
 This package is not meant for general use and is not tested. In particular, this package requires results from MULTEM in a specific format, and some knowledge of both MATLAB and python is needed to use it successfully. While the package is meant to be relatively simple to use, there are many pitfalls and details that must be considered, and care should be taken when using this package to generate results for scientific publication. This is especially true when it comes to overlaying atom positions on images and calibrating the signals from the simulation parameters. These things are only briefly tested and no guarantees are made. Possible problems in this regard involves trasposing (or not) the images relative to the atomic positions, reversial of scan directions, and image origins. Help is greatly appreciated, especially if unexpected results/errors are encountered.
@@ -216,3 +220,152 @@ save(sprintf("%s/%s_results.ecmat", output_path, simulation_name), "results", "-
 ```
 
 [Up](#content)
+
+## 6 Examples
+The general workflow of MULTEM is
+  1. Make a model in your favourite tool and convert it to a .mat file
+        - Use e.g. `mul2py.io.models.save_multem_model()` to convert it.
+  2. Write a MATLAB script that specifies simulation parameters and loads this model, called e.g. "my_simulation.m"
+        - This can be done by using the setup-functions provided at [https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/matlab](https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/matlab)
+  3. Run a SLURM job on the cluster
+        - Run the simulation in MATLAB: `matlab -nodisplay -nodesktop -nosplash -r "my_simulation"`
+        - Navigate to where the results (named e.g. "my_results.ecmat") were stored and convert your results using: `python convert_ecmat.py my_results.ecmat`
+        - Download the resulting .hspy file and enjoy!
+
+Several complete examples are also provided in [https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/examples](https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/examples).
+
+### 6.1 Making a model
+To make a model based on a crystal unit cell defined in "Al.cif", simply load the cif file with [ASE](https://wiki.fysik.dtu.dk/ase/) and replicate it as you want, then save it as a .mat file for MULTEM using `mul2py.io.models.save_multem_model()`
+```Python
+from ase.io import read
+from mul2py.io.models import save_multem_model
+
+na, nb, nc = 10, 10, 20
+Al = read('Al.cif')
+slab = Al*[na, nb, nc]
+
+#Define debye-waller factors for the elements in the model in a dictionary. This is required by MULTEM
+dwfs = {
+    13: 0.7993,
+}
+
+#Define the slice thickness you want to slice the model with
+a, b, c, alpha, beta, gamma = Al.get_cell_lengths_and_angles() #Get lattice parameters
+dz = c/2 #Slice the model in a meaningful way (for fcc, a slice thickness of a/2 will produce a slicing where only one atomic layer is inside the slice)
+
+save_multem_model('Al_{nx:0f}x{ny:0f}x{nz:0f}.mat'.format(nx=na, ny=nb, nz=nc), slab, B=dwfs) #Save the model.
+```
+
+### 6.2 STEM simulation script
+As an example, a STEM simulation script "STEMcpu.m" may look like this:
+```MATLAB
+%%
+clear all
+clc
+
+%% Set up paths
+multem_path =  '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM' %Path to MULTEM installation
+addpath(char(sprintf("%s/crystalline_materials", multem_path))); % Add specific subfolders to the path
+addpath(char(sprintf("%s/matlab_functions", multem_path))); % Add specific subfolders to the path
+addpath(char(sprintf("%s/mex_bin", multem_path))); % Add specific subfolders to the path
+
+%% System configuration
+system_conf.precision = 1;                           % eP_Float = 1, eP_double = 2
+system_conf.device = 1;                              % eD_CPU = 1, eD_GPU = 2
+system_conf.cpu_nthread = 16; 
+system_conf.gpu_device = 0;
+
+%% Timestamp
+start_time = datetime('now','TimeZone','local');
+fprintf("Starting simulation script at %s\n", start_time);
+
+%% Define detector collection semi-angles
+clear collection_angles
+collection_angles(1).inner_ang = 0; %semi-angle (mrad)
+collection_angles(1).outer_ang = 40; %semi-angle (mrad)
+collection_angles(2).inner_ang = 48; %semi-angle (mrad)
+collection_angles(2).outer_ang = 200; %semi-angle (mrad)
+
+%% Define beam convergence semi-angle
+convergence_angle = 27; %semi-angle (mrad)
+
+input_multislice = STEM_setup("test_model_L_10x10x20.mat", convergence_angle, collection_angles, "phonons", 1, "nx", 8, "ny", 16, "instrument", "ARM200F", "multem_path", multem_path);
+
+%% Store input parameters in results struct
+results.input = input_multislice;
+results.system = system_conf;
+
+%% Run simulation
+clear il_MULTEM;
+tic;
+output_multislice = il_MULTEM(system_conf, input_multislice); 
+toc;
+
+%% Construct results.images
+n_t = length(output_multislice.data); %The number of thicknesses
+detectors = length(output_multislice.data(1).image_tot); % The number of detectors
+
+results.images = zeros(input_multislice.scanning_ns, input_multislice.scanning_ns, n_t, detectors);
+
+for t = 1:n_t
+    for d = 1:detectors
+        results.images(:, :, t, d) = transpose(output_multislice.data(t).image_tot(d).image);
+    end
+end
+
+%% Set some additional details
+results.thick = output_multislice.thick;
+results.dx = output_multislice.dx;
+results.dy = output_multislice.dy;
+
+end_time = datetime('now','TimeZone','local');
+fprintf("Simulation finished at %s\n", end_time);
+results.elapsed_time = seconds(end_time - start_time);
+
+%% Save the data
+save("/lustre1/work/emilc/MULTEM/Test/STEMcpu_results.ecmat", "results", "-v7.3"); %Choose a sensible directory to save your results.
+``` 
+ 
+Example MATLAB scripts can be found at [https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/matlab/example_multem_scripts](https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/matlab/example_multem_scripts). These scripts are meant for testing mainly, but they show the general idea quite nicely as well.
+
+### 6.3 SLURM job script
+When running on the cluster, you must choose the correct queue that matches your `system_conf` variable in the matlab script. As an example, the following slurm code will run the above simulation and then convert it to a hyperspy signal.
+
+```bash
+#!/bin/bash
+
+#SBATCH --partition=CPUQ
+#SBATCH --time=01-20:0:00
+#SBATCH --job-name="STEMcpu"
+#SBATCH --output=STEMcpu-%A.out
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=16
+#SBATCH --mem=64000
+#SBATCH --account=share-nv-fys-tem
+
+echo "we are running from this directory: $SLURM_SUBMIT_DIR"
+echo "The name of the job is: $SLURM_JOB_NAME"
+
+echo "The job ID is $SLURM_JOB_ID"
+echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_JOB_NUM_NODES"
+echo "We are using $SLURM_CPUS_ON_NODE cores"
+
+echo "We are using $SLURM_CPUS_ON_NODE cores per node"
+echo "Total of $SLURM_NTASKS cores"
+
+module load foss/2016a #Necessary for CUDA
+module load CUDA/8.0.61 #Necessary for MULTEM, even if no GPU is being used I think
+module load MATLAB/2017a #Necessary for MULTEM
+
+echo "Running STEM simulation"
+matlab -nodisplay -nodesktop -nosplash -r "STEMcpu" #Run the script called `STEMcpu.m`
+
+echo "Converting results to HyperSpy format using mul2py"
+module load GCCcore/.8.2.0 Python/3.7.2 #Necessary for mul2py
+source /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py-env/bin/activate #Activate environment with mul2py in project folder
+python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py /lustre1/work/emilc/MULTEM/Test/STEMcpu_results.ecmat #Run convert_ecmat.py script. The last path here must match the path you chose to store your results at in the matlab script.
+
+scontrol show job ${SLURM_JOB_ID} -d #Print job details
+```
+

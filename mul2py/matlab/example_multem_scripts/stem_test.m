@@ -72,8 +72,6 @@ results.thick = output_multislice.thick;
 results.dx = output_multislice.dx;
 results.dy = output_multislice.dy;
 
-results.simulation_type = "STEM"; %This will be used by mul2py to decide how to construct HyperSpy signals
-
 end_time = datetime('now','TimeZone','local');
 fprintf("Simulation finished at %s\n", end_time);
 results.elapsed_time = seconds(end_time - start_time);
