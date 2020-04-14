@@ -105,11 +105,29 @@ In MULTEM, the results should be saved in the following format for `mul2py.build
     - xs: The x-positions of the beam
     - ys: The y-positions of the beam
     - images: A nD stack of images (the actual results)
-    - thicknesses: A cell of thicknesses at each x-y- position
-    - thick: The thicknesses from the last output (i.e. the output from IL_MULTEM())
+    - thicknesses: A cell of thicknesses at each x-y-position
+    - thick: The thicknesses from the last output (i.e. the output from `il_MULTEM()`)
     - dx: Image resolution in x-direction
     - dy: Image resolution in y-direction
     - elapsed_time: The elapsed time of the complete MATLAB work (from start of the script to the end right before storing data)
+
+In MATLAB, this is done by creating a struct called `results` with the various fields:
+```MATLAB
+input_multislice; %The input parameter to il_MULTEM
+system_conf; %The system configuration passed to il_MULTEM
+output_multislice = il_MULTEM(system_conf, input_multislice);
+
+results.input=input_multislice;
+results.system = system_conf;
+results.xs = xs;
+results.ys = ys;
+results.images = image_stack;
+results.thicknesses = {};
+results.thick = output_multislice.thick;
+results.dx = output_multislice.dx;
+results.dy = output_multislice.dy;
+results.elapsed_time = seconds(stop-start);
+```
 
 The units are always given as Å, except for `dx` and `dy`. For real-space simualtion images such as EWRS, STEM, and HRTEM simulations, these values are given as Å. For diffraction-space simulations such as CBED, they have units 1/Å.
 
