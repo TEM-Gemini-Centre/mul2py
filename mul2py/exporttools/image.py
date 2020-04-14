@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def make_image(signal, inav=None, transpose=False, *args, **kwargs):
+def make_image(signal, inav=None, transpose=False, mark_atoms=True, annotations=True, **kwargs):
     """Make an image of simulation results.
 
     Shows a frame of the signal and adds annotations and markings to it. The frame can be selected from a provided 'inav' index, or by picking the current axes_manager indices.
@@ -14,18 +14,18 @@ def make_image(signal, inav=None, transpose=False, *args, **kwargs):
         The frame from signal to show. If None, then the current axes_manager.indices is picked.
     transpose : bool, optional.
         Whether to transpose the data before plotting. Default is False.
+    mark_atoms : bool, optional.
+        Whether to mark atoms above the current image slice in the model or not. The appearance of the markings is controlled by kwargs['markers']. Default is True.
+    annotations : bool, optional.
+        Whether to annotate the image according to the kwargs['annotate'] parameters. Default is True
 
     Other Parameters
     ----------------
-    *args : optional positional arguments, optional.
-        If 'annotate' is given, the image is annotated according to the kwargs['annotate'] parameters.
-        If 'mark_atoms' is given, the atoms above the current image slice is marked according to the kwargs['markers'] parameters.
-
     **kwargs : optional keyword arguments passed on to sub-calls, optional.
         kwargs['figure'] is passed to plt.figure(). Default is {'dpi': 72, 'figsize': (2,2), 'frameon': False
         kwargs['ax'] is passed to fig.add_axes(). Default is {'position': [0,0,1,1], 'xticks': [], 'yticks': [], 'frameon': False}
         kwargs['imshow'] is passed to plt.imshow(). Default is {'extent': (min(y), max(y), min(x), max(x)), 'vmin': min(data), 'vmax':max(data)}
-        kwargs['annotate'] is passed to plt.annotate(). Default is {'color': 'w', 'ha':'left', 'va':'top', 'xy':(0.02, 0.98), 'xycoords': 'axes fraction', 'format_apec':'.2f', 'text':None}. 'text':None will annotate the image with corresponding navigation space coordinates.
+        kwargs['annotate'] is passed to plt.annotate(). Default is {'color': 'w', 'ha':'left', 'va':'top', 'xy':(0.02, 0.98), 'xycoords': 'axes fraction', 'format_spec':'.2f', 'text':None}. 'text':None will annotate the image with corresponding navigation space coordinates.
         kwargs['markers'] is passed to plt.scatter(). Default is {'edgecolors': Z-value of atoms, 's':10, 'lw':0.4, 'marker':'o', 'alpha':0.5, 'facecolors': 'none'}.
 
     Returns
@@ -92,7 +92,7 @@ def make_image(signal, inav=None, transpose=False, *args, **kwargs):
             ax.imshow(signal.inav[inav].data, **imshow_kwargs)
 
     # Set up frame annotation
-    if 'annotate' in args:
+    if annotations:
         annotate_kwargs = {
             'color': 'w',
             'ha': 'left',
@@ -119,7 +119,7 @@ def make_image(signal, inav=None, transpose=False, *args, **kwargs):
             ax.annotate(text, xy, **annotate_kwargs)
 
     # Set up atom markings
-    if 'mark_atoms' in args:
+    if mark_atoms:
         atoms = np.array(signal.metadata.SimulationParameters.spec_atoms).T
         atoms = atoms[
             atoms[:, 3] < signal.axes_manager['z'].offset + signal.axes_manager['z'].index * signal.axes_manager[
