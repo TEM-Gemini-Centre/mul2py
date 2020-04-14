@@ -1,6 +1,6 @@
 # mul2py
 
-This is a python package for converting [MULTEM](https://github.com/Ivanlh20/MULTEM) results to [HyperSpy](https://github.com/hyperspy/hyperspy) signals and for subsequent plotting/visualisation. It requires specific fields to be saved to MATLAB structs from MULTEM, see more [here](#the-easy-mat-format).
+This is a python package for converting [MULTEM](https://github.com/Ivanlh20/MULTEM) results to [HyperSpy](https://github.com/hyperspy/hyperspy) signals and for subsequent plotting/visualisation. It requires specific fields to be saved to MATLAB structs from MULTEM, see more [here](#5-the-easy-mat-format).
 
 ## Content
   - [1 Disclaimer](#1-disclaimer)
