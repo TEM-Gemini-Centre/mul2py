@@ -119,58 +119,59 @@ clc
 %% System configuration
 gpu = true; %Use GPU?
 if gpu
-    system_conf.precision = 1;                           % eP_Float = 1, eP_double = 2
-    system_conf.device = 2;                              % eD_CPU = 1, eD_GPU = 2
-    system_conf.cpu_nthread = 5; 			             % Does the number of CPU threads matter when running on GPU? EXPERIMENT!!
-    system_conf.gpu_device = 1;				             % MULTEM can only use one GPU device at the time? Only ask for a single GPU from IDUN, and use this.
+    system_conf.precision = 1;                                              % eP_Float = 1, eP_double = 2
+    system_conf.device = 2;                                                 % eD_CPU = 1, eD_GPU = 2
+    system_conf.cpu_nthread = 5; 			                                % Does the number of CPU threads matter when running on GPU? EXPERIMENT!!
+    system_conf.gpu_device = 1;				                                % MULTEM can only use one GPU device at the time? Only ask for a single GPU from IDUN, and use this.
 else
-    system_conf.precision = 1;                           % eP_Float = 1, eP_double = 2
-    system_conf.device = 1;                              % eD_CPU = 1, eD_GPU = 2
+    system_conf.precision = 1;                                              % eP_Float = 1, eP_double = 2
+    system_conf.device = 1;                                                 % eD_CPU = 1, eD_GPU = 2
     system_conf.cpu_nthread = 4; 
     system_conf.gpu_device = 0;
 end
 
 %% Timestamp
-start_time = datetime('now','TimeZone','local');
-fprintf("Starting simulation script at %s\n", start_time);
+start_time = datetime('now','TimeZone','local');                            % Start tracking time
+fprintf("Starting simulation script at %s\n", start_time);                  % Print the start time
 
 %% output_details
-simulation_name = "EWRS_test";
-output_path = ".";
-mkdir(output_path);
+simulation_name = "EWRS_test";                                              % Make a name for the simulation
+output_path = ".";                                                          % Define an output path
+mkdir(output_path);                                                         % Make the output directory
 
 %% Make simulation parameters
 input_multislice = EWRS_setup("test_model_L_10x10x20.mat", 15, "phonons", 1, "nx", 8, "ny", 16, "instrument", "2100F", "multem_path", "C:\Program Files\MULTEM\MULTEM_binary");
-original_input = input_multislice;
-results.system = system_conf;
+original_input = input_multislice;                                          % Backup the original input parameters
+results.system = system_conf;                                               % Store the system configuration in the `results` structure
 
 %% Set up scan pattern
-centre_x = original_input.spec_lx/2; %Scan centre
-centre_y = original_input.spec_ly/2; %Scan centre
+centre_x = original_input.spec_lx/2;                                        % Scan centre
+centre_y = original_input.spec_ly/2;                                        % Scan centre
 
-scanning_width = original_input.spec_cryst_a; %Scan width in Å
-scanning_height = original_input.spec_cryst_b; %Scan height in Å
+scanning_width = original_input.spec_cryst_a;                               % Scan width in Å
+scanning_height = original_input.spec_cryst_b;                              % Scan height in Å
 
-scanning_ns_x = 2; %Number of scan points
-scanning_ns_y = 3; %Number of scan points
+scanning_ns_x = 2;                                                          % Number of scan points
+scanning_ns_y = 3;                                                          % Number of scan points
 
-x0 = centre_x - scanning_width/2; %Lower left corner of scan (model viewed from bottom?)
-y0 = centre_y - scanning_height/2; %Lower left corner of scan (model viewed from bottom?)
+x0 = centre_x - scanning_width/2;                                           % Lower left corner of scan (model viewed from bottom?)
+y0 = centre_y - scanning_height/2;                                          % Lower left corner of scan (model viewed from bottom?)
 
-xe = x0 + scanning_width; %Upper right corner of scan (model viewed from bottom?)
-ye = x0 + scanning_height; %Upper right corner of scan (model viewed from bottom?)
+xe = x0 + scanning_width;                                                   % Upper right corner of scan (model viewed from bottom?)
+ye = x0 + scanning_height;                                                  % Upper right corner of scan (model viewed from bottom?)
 
 
-xs = linspace(x0, xe, scanning_ns_x); %Beam scan positions
-ys = linspace(y0, ye, scanning_ns_y); %Beam scan positions
+xs = linspace(x0, xe, scanning_ns_x);                                       % Beam scan positions
+ys = linspace(y0, ye, scanning_ns_y);                                       % Beam scan positions
 
 %% Loop through x and y positions
-results.input = original_input; %Store input parameters
-results.xs = xs; %Store beam positions
-results.ys = ys; %Store beam positions
+results.input = original_input;                                             % Store input parameters
+results.xs = xs;                                                            % Store beam positions
+results.ys = ys;                                                            % Store beam positions
 results.images = zeros(input_multislice.nx, input_multislice.ny, size(xs, 2), size(ys, 2), size(input_multislice.thick, 2)); %Predefine image stack
-results.thicknesses = {}; %Predefine thickness cell
-%Loop through beam positions and do a simulation at each position
+results.thicknesses = {};                                                   % Predefine thickness cell
+
+%% Loop through beam positions and do a simulation at each position
 counter = 1;
 for i = 1:size(results.xs, 2)
     x = xs(i);
