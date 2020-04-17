@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     #Check file type
     if not filepath.suffix == '.ecmat':
-        raise ValueError('Can only load "ecmat" files, got "{}"'.format(filepath.suffix))
+        raise ValueError('Can only convert "ecmat" files, got "{}"'.format(filepath.suffix))
 
     #Load and make signal
     signal = buildtools.make_signal(filepath)

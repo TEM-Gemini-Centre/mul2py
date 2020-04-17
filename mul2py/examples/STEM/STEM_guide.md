@@ -77,7 +77,7 @@ input_multislice.scanning_ye = input_multislice.spec_ly/2 + input_multislice.spe
 ```
 This will scan 25 pixels (`input_multislice.scanning_ns=25`) and include the last row and column (`input_multislice.scanning_periodic=0`). It will start half a unit cell from the center of the model (`input_multislice.scanning_x0 = input_multislice.spec_lx/2 - input_multislice.spec_cryst_a/2`) and scan one unit cell to end up at half a unit cell away from the centre of the model in the other direction (`input_multislice.scanning_x0 = input_multislice.spec_lx/2 + input_multislice.spec_cryst_a/2`).
 
-### Step 5 - Run simulation
+### Step 5 - Execute simulation
 When all is prepared, you can run the simulation by sending `system_conf` and `input_multislice` to the `il_MULTEM` function:
 ```MULTEM
 clear il_MULTEM;
@@ -114,6 +114,100 @@ results.dy = output_multislice.dy;
 save(sprintf("%s/%s_results.ecmat", output_path, simulation_name), "results", "-v7.3");
 ```
 
+## Running your simulation
+When you have prepared your files (the model and the matlab script), upload them to the cluster, write a suitable SLURM script, and queue the job. It is important that the SLURM script is tuned to your simulation (run time, number of cores, GPU assignment, etc) and you should make this yourself. However, the following job script should work fine for this example and serve as a template. It requires to be in the same folder as the MULTEM MATLAB script called "STEM.m" in this case.
+
+```shell script
+#!/bin/bash
+
+#SBATCH --partition=GPUQ
+#SBATCH --time=01-20:0:00
+#SBATCH --job-name="STEM"
+#SBATCH --output=STEM-%A.out
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH -- gres=gpu:1
+#SBATCH --mem=64000
+#SBATCH --account=share-nv-fys-tem
+
+echo "we are running from this directory: $SLURM_SUBMIT_DIR"
+echo "The name of the job is: $SLURM_JOB_NAME"
+
+echo "The job ID is $SLURM_JOB_ID"
+echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_JOB_NUM_NODES"
+echo "We are using $SLURM_CPUS_ON_NODE cores"
+
+echo "We are using $SLURM_CPUS_ON_NODE cores per node"
+echo "Total of $SLURM_NTASKS cores"
+
+module load foss/2016a
+module load CUDA/8.0.61
+module load MATLAB/2017a
+
+echo "Running STEM simulation"
+matlab -nodisplay -nodesktop -nosplash -r "STEM"
+
+scontrol show job ${SLURM_JOB_ID} -d
+```
+
+## Converting your results
+You can also use the cluster to convert your results through the `mul2py` package. The project folder on IDUN should include a virtual environment where `mul2py` is installed, and you can run the python script `convert_ecmat.py` to make a HyperSpy file from the output of the simulation.
+
+```shell script
+#!/bin/bash
+
+#SBATCH --partition=CPUQ
+#SBATCH --time=00-01:0:00
+#SBATCH --job-name="STEMConvert"
+#SBATCH --output=STEMConvert-%A.out
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=16
+#SBATCH --mem=64000
+#SBATCH --account=share-nv-fys-tem
+
+echo "we are running from this directory: $SLURM_SUBMIT_DIR"
+echo "The name of the job is: $SLURM_JOB_NAME"
+
+echo "The job ID is $SLURM_JOB_ID"
+echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_JOB_NUM_NODES"
+echo "We are using $SLURM_CPUS_ON_NODE cores"
+
+echo "We are using $SLURM_CPUS_ON_NODE cores per node"
+echo "Total of $SLURM_NTASKS cores"
+
+echo "Converting results to HyperSpy format using mul2py"
+module load GCCcore/.8.2.0 Python/3.7.2
+source /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py-env/bin/activate
+python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py /lustre1/work/emilc/MULTEM/Test/STEM_results.ecmat
+
+scontrol show job ${SLURM_JOB_ID} -d
+```
+In this case, the shell script requires that the output from the simulation is stored at "/lustre1/work/emilc/MULTEM/Test/STEM_results.ecmat", and that the path to the python script "convert_ecmat.py" is correct. 
+
+### About `convert_ecmat.py`
+This script takes one argument, namely the path to a ".ecmat" file (output from the MULTEM simulation), creates a complete and scaled HyperSpy signal with sensible metadata and saves this signal to a file. The filename of the output file is the same as the input file and the extension is ".hspy". The script also takes one positional argument "--overwrite" that determines if any existing file will be overwritten (default is `True`). In other words, if you call `python convert_ecmat.py STEM_results.ecmat`, a file with the filename "STEM_results.hspy" will be created or overwritten. If you call `python convert_ecmat.py STEM_results.ecmat --overwrite False`, the same file will be created unless a file named "STEM_results.hspy" already exists in the directory.
+
 ## Postprocessing
+After the output has been created (and possibly converted), it is time to make sense of it. If simply the `output_multislice` struct is written to file, it is best to do the postprocessing in MATLAB, or to export the data to some other format to treat them in your favourite tool. If an ".ecmat" file was created instead and has been converted to a ".hspy" file, you can use HyperSpy to postprocess your data.
+
+### HyperSpy
+To analyse your hyperspy STEM simulation signal, you should first load the data, and then do whatever analysis you require. One possible and useful method is to create series of virtual dark field images of particular atomic columns and see how the scattering from this column develops through the thickness. If your model has an atomic column situated at $x=0$ Å and $y=0$ Å, tou can make a thickness profile of that column by integrating the scattering intensity from its center out to about $1/4$ lattice parameter ($1.025$ Å) as in the following example:
+
+```Python
+import hyperspy.api as hs
+
+signal = hs.load("STEM_results.hspy") #Load the converted ".ecmat" file
+print(signal.metadata) #Print the metadata of the signal
+
+signal.plot() #Plot the signal
+roi = hs.roi.CircleROI(cx=0, cy=0, r=1.025) #Make a region of interest
+roi.add_widget(signal) #Connect the roi to the signal
+cropped_signal = roi(signal) #Extract the roi from the signal (does not affect the original signal)
+
+scattering_thickness_profile = sum(cropped_signal, axis=(0,1)) #Sum the signal in the x and y axes
+scattering_thickness_profile.plot() #Plot the thickness profile
+```  
 
 ## Complete example
