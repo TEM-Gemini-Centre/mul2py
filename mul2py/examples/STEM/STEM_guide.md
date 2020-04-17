@@ -415,6 +415,9 @@ blurred_signal.plot()
 
 ```
 
+#### Thickness profiles
+Thickness profiles can be made by creating a region of interest centered on an atomic column, and integrating the intensity inside this region. To visualise the profile of a signal with multiple detectors, you must also choose which detector(s) to show before plotting: 
+
 ```Python
 import hyperspy.api as hs
 
