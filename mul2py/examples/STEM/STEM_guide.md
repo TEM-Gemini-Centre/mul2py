@@ -66,7 +66,7 @@ First, we define the collection angles we want to use as a cell-array with struc
 
 ### Step 4 - Define your scan area
 After defining your `input_multislice` struct, you can make changes to its fields (and add new ones). For instance, you can change the scan area of your simulation:
-```MULTEM
+```MATLAB
 input_multislice.scanning_ns = 25;
 input_multislice.scanning_periodic = 0;
 input_multislice.scanning_x0 = input_multislice.spec_lx/2 - input_multislice.spec_cryst_a/2;
@@ -200,14 +200,238 @@ import hyperspy.api as hs
 
 signal = hs.load("STEM_results.hspy") #Load the converted ".ecmat" file
 print(signal.metadata) #Print the metadata of the signal
+print(signal.axes_manager) #Print some info about the axes
 
 signal.plot() #Plot the signal
-roi = hs.roi.CircleROI(cx=0, cy=0, r=1.025) #Make a region of interest
-roi.add_widget(signal) #Connect the roi to the signal
+roi = hs.roi.CircleROI(cx=0, cy=0, r=1.025) #Make a region of interest. Make sure that the position of the roi is within the x-y-space of the signal
+roi.add_widget(signal, axes=['x', 'y']) #Connect the roi to the signal
 cropped_signal = roi(signal) #Extract the roi from the signal (does not affect the original signal)
 
-scattering_thickness_profile = sum(cropped_signal, axis=(0,1)) #Sum the signal in the x and y axes
-scattering_thickness_profile.plot() #Plot the thickness profile
+scattering_thickness_profile = sum(cropped_signal, axes=['x', 'y']) #Sum the signal in the x and y axes
+
+detector = 1 #Choose a detector in the signal
+scattering_thickness_profile.inav[:, detector].plot() #Plot the thickness profile of the image stack for the selected detector
 ```  
+For a more detailed explanation and guide, please see the notebook at [https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/examples/STEM/STEM_postprocessing.ipynb](https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/examples/STEM/STEM_postprocessing.ipynb).
 
 ## Complete example
+
+### Model
+Run the following code in e.g. a jupyter notebook to generate the model file.
+```Python
+from ase.io import read
+import mul2py as m2p
+
+Al = read('Al.cif') #Load the crystal information file
+
+na, nb, nc = 10, 10, 20 # Number of unit cells along a, b, and c crystal axes
+
+slab = Al*[na, nb, nc] #Duplicate the model to make a slab
+
+slab.center(axis=(0, 1)) #Center the slab in the x-y plane - leave it unchanged in z-direction
+
+dwfs = {13: 0.1006}
+m2p.io.save_multem_model('Al_10x10x20.mat', slab, B=dwfs)
+```
+
+### Simulation
+Copy the following lines to a MATLAB script and save it as "STEM.m" in the same folder with the model you made.
+```MATLAB
+%%
+clear all
+clc
+
+%% System configuration
+system_conf.precision = 1;                           % eP_Float = 1, eP_double = 2
+system_conf.device = 2;                              % eD_CPU = 1, eD_GPU = 2
+system_conf.cpu_nthread = 1; 			 % Does the number of CPU threads matter when running on GPU? EXPERIMENT!!
+system_conf.gpu_device = 1;				 % MULTEM can only use one GPU device at the time? Only ask for a single GPU from IDUN, and use this.
+
+%% Timestamp
+start_time = datetime('now','TimeZone','local');
+fprintf("Starting simulation script at %s\n", start_time);
+
+%% Paths
+MULTEM_path = "/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM";  % Path to MULTEM installation on the cluster
+addpath(char(sprintf("%s/crystalline_materials", MULTEM_path)));        % Add the crystalline materials function to the path (used for making models on the go if you want)
+addpath(char(sprintf("%s/matlab_functions", MULTEM_path)));             % Add MULTEM matlab functions, such as `multem_default_values()` to the path.
+addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add the core MULTEM stuff to run simulations
+
+%% output_details
+simulation_name = "STEM";
+output_path = "/lustre1/work/emilc/MULTEM/Test/"; %Path to put results
+mkdir(output_path);
+
+%% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
+clear collection_angles
+collection_angles(1).inner_ang = 0; %semi-angle (mrad)
+collection_angles(1).outer_ang = 40; %semi-angle (mrad)
+collection_angles(2).inner_ang = 48; %semi-angle (mrad)
+collection_angles(2).outer_ang = 200; %semi-angle (mrad)
+
+convergence_angle = 27; %semi-angle (mrad)
+
+input_multislice = STEM_setup("Al_10x10x20.mat", convergence_angle, collection_angles, "phonons", 20, "nx", 1024, "ny", 1024, "instrument", "ARM200F", "multem_path", multem_path);
+
+%% Adjust scan pattern
+input_multislice.scanning_ns = 25;
+input_multislice.scanning_periodic = 0;
+input_multislice.scanning_x0 = input_multislice.spec_lx/2 - input_multislice.spec_cryst_a/2;
+input_multislice.scanning_xe = input_multislice.spec_lx/2 + input_multislice.spec_cryst_a/2;
+
+input_multislice.scanning_y0 = input_multislice.spec_ly/2 - input_multislice.spec_cryst_b/2;
+input_multislice.scanning_ye = input_multislice.spec_ly/2 + input_multislice.spec_cryst_b/2;
+
+%% Run simulation
+clear il_MULTEM;
+tic;
+output_multislice = il_MULTEM(system_conf, input_multislice); 
+toc;
+
+%% Store input parameters in results struct
+results.input = input_multislice;
+results.system = system_conf;
+
+%% Construct results images
+n_t = length(output_multislice.data); %The number of thicknesses
+detectors = length(output_multislice.data(1).image_tot); % The number of detectors
+
+results.images = zeros(input_multislice.scanning_ns, input_multislice.scanning_ns, n_t, detectors);
+
+for t = 1:n_t
+    for d = 1:detectors
+        results.images(:, :, t, d) = transpose(output_multislice.data(t).image_tot(d).image);
+    end
+end
+
+%% Set some additional details
+results.thick = output_multislice.thick;
+results.dx = output_multislice.dx;
+results.dy = output_multislice.dy;
+
+%% Save the data
+save(sprintf("%s/%s_results.ecmat", output_path, simulation_name), "results", "-v7.3");
+```
+
+### SLURM
+Make the following shell script and save it as "STEM.slurm" in the same folder as the previous two files:
+```shell script
+#!/bin/bash
+
+#SBATCH --partition=GPUQ
+#SBATCH --time=01-20:0:00
+#SBATCH --job-name="STEM"
+#SBATCH --output=STEM-%A.out
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH -- gres=gpu:1
+#SBATCH --mem=64000
+#SBATCH --account=share-nv-fys-tem
+
+echo "we are running from this directory: $SLURM_SUBMIT_DIR"
+echo "The name of the job is: $SLURM_JOB_NAME"
+
+echo "The job ID is $SLURM_JOB_ID"
+echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_JOB_NUM_NODES"
+echo "We are using $SLURM_CPUS_ON_NODE cores"
+
+echo "We are using $SLURM_CPUS_ON_NODE cores per node"
+echo "Total of $SLURM_NTASKS cores"
+
+module load foss/2016a
+module load CUDA/8.0.61
+module load MATLAB/2017a
+
+echo "Running STEM simulation"
+matlab -nodisplay -nodesktop -nosplash -r "STEM"
+
+scontrol show job ${SLURM_JOB_ID} -d
+```
+Copy both "Al_10x10x20.mat" model file and the "STEM.m" MATLAB script to somewhere on your directory on IDUN (see other guides on how to accomplish this). Then log in to IDUN on a terminal (using e.g. PuTTY on windows) and navigate to where you moved the three files "Al_10x10x20.mat", "STEM.m" and "STEM.slurm" and submit the job:
+```bash
+cd directory_containing_your_files
+sbatch STEM.slurm
+```
+ Take a cup of coffee or maybe wait a few days for the simulation to finish before proceeding
+### Conversion
+Once the simulation has finished, you can convert the results on IDUN by making another SLURM script:
+```shell script
+#!/bin/bash
+
+#SBATCH --partition=CPUQ
+#SBATCH --time=00-01:0:00
+#SBATCH --job-name="STEMConvert"
+#SBATCH --output=STEMConvert-%A.out
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=16
+#SBATCH --mem=64000
+#SBATCH --account=share-nv-fys-tem
+
+echo "we are running from this directory: $SLURM_SUBMIT_DIR"
+echo "The name of the job is: $SLURM_JOB_NAME"
+
+echo "The job ID is $SLURM_JOB_ID"
+echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_JOB_NUM_NODES"
+echo "We are using $SLURM_CPUS_ON_NODE cores"
+
+echo "We are using $SLURM_CPUS_ON_NODE cores per node"
+echo "Total of $SLURM_NTASKS cores"
+
+echo "Converting results to HyperSpy format using mul2py"
+module load GCCcore/.8.2.0 Python/3.7.2
+source /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py-env/bin/activate
+python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py <directory_with_your_simulation_files>/STEM_results.ecmat
+
+scontrol show job ${SLURM_JOB_ID} -d
+```
+Save this shell script as "STEMconvert.slurm" somewhere on IDUN, possibly the same place as your other simulaiton files, replace `<directory_with_your_simulation_files>` with the location of your simulation files, e.g. `/lustre1/work/emilc/MULTEM/Test/STEM`. Submit the job as before
+ ```bash
+cd <directory_with_your_simulation_files>
+sbatch STEMconvert.slurm
+```
+and wait for the job to finish. Once it is finished, you can transfer the resulting `<directory_with_your_simulation_files.STEM_results.hspy` to your local computer and continue with postprocessing and analysing the data
+
+### Postprocessing
+Postprocess your data as you would with other TEM data, e.g. by making virtual images or thickness profile plots, e.g in a python script or a jupyter notebook.
+
+#### Spatial incoherence
+If you have not run the simulation with spatial incoherence and numerical integration options (i.e. if you have _not_ used `input_multislice.illumination_model=4; input_multislice.temporal_spatial_incoh=1;`, which can considerably increase the simulation time and is therefore not often used), you need to "postsimulate" the effect of your probesize, by guessing on a probe shape and size, before convoluting this with your results. This can be done with
+
+```Python
+import hyperspy.api as hs
+import numpy as np
+from scipy.ndimage import gaussian_filter
+
+signal = hs.load("STEM_results.hspy")
+
+fwhm = 0.1 #FWHM [nm]
+fwhm /= signal.axes_manager['x'].scale
+variance = fwhm / (2 * np.sqrt( 2 * np.log( 2 ) ) ) 
+blurred_signal = signal.map(gaussian_filter, inplace = False, sigma = variance, mode = 'wrap')
+
+blurred_signal.plot()
+
+```
+
+```Python
+import hyperspy.api as hs
+
+signal = hs.load("STEM_results.hspy")
+
+print(signal.metadata)
+print(signal.axes_manager)
+
+signal.plot()
+
+roi = hs.roi.CircleROI(cx=19.07, cy=17.13, r=1.025) #Make a region of interest
+print(roi)
+roi.add_widget(signal, axes=['x', 'y']) #Connect the roi to the signal
+cropped_signal = roi(signal) #Extract the roi from the signal (does not affect the original signal)
+
+scattering_thickness_profile = cropped_signal.sum(axis=('x', 'y')) #Sum the signal in the x and y axes
+
+detector = 1 #Which detector to plot the thickness profile for
+scattering_thickness_profile.inav[:,detector].plot() #Plot the thickness profile for the scattering to a certain detector angle interval
+```
