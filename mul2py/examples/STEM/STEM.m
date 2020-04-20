@@ -25,6 +25,8 @@ addpath(char(sprintf("%s/crystalline_materials", MULTEM_path)));        % Add th
 addpath(char(sprintf("%s/matlab_functions", MULTEM_path)));             % Add MULTEM matlab functions, such as `multem_default_values()` to the path.
 addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add the core MULTEM stuff to run simulations
 
+addpath(char("/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/matlab")) % Add mul2py matlab scripts/functions to path
+
 %% output_details
 simulation_name = "STEM";
 output_path = "."; %Path to put results "." means it will put them in the same directory as this script.
