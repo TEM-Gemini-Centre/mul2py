@@ -28,7 +28,7 @@ addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add th
 %% output_details
 simulation_name = "HRTEM";
 output_path = ".";
-mkdir(output_path);
+mkdir(char(output_path));
 
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
 input_multislice = HRTEM_setup("Al_10x10x20.mat", "nx", 2048, "ny", 2048, "phonons", 20, "instrument", "ARM200F", "multem_path", MULTEM_path);
