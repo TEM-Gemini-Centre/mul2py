@@ -64,6 +64,8 @@ input_multislice = STEM_setup("Al_10x10x20.mat", convergence_angle, collection_a
 ```
 First, we define the collection angles we want to use as a cell-array with struct fields (inner and outer angles). Then, we define our convergence angle, before we call the setup function. This function takes three required parameters: The model path, the convergence angle, and the collection angles. Additionally, you can provide several optional parameters, such as the number of phonons, the potential sampling, the instrument (predefined aberration values), and the path to the MULTEM installation, among many more. You can also specify the scan start and stop values, but this is best done afterwards.
 
+NB! The model size and the potential sampling must be chosen in accordance with your maximum collection angle! See [https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/examples/Models](https://github.com/TEM-Gemini-Centre/mul2py/tree/master/mul2py/examples/Models) for more details.
+
 ### Step 4 - Define your scan area
 After defining your `input_multislice` struct, you can make changes to its fields (and add new ones). For instance, you can change the scan area of your simulation:
 ```MATLAB
@@ -244,7 +246,7 @@ m2p.io.save_multem_model('Al_10x10x20.mat', slab, B=dwfs)
 ```
 
 ### The simulation script
-The somulation script "STEM.m" contains the following (or similar) MATLAB code
+The simulation script "STEM.m" contains the following (or similar) MATLAB code
 ```MATLAB
 %%
 clear all
