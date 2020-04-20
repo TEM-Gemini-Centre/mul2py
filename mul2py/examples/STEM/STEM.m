@@ -28,7 +28,7 @@ addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add th
 %% output_details
 simulation_name = "STEM";
 output_path = "."; %Path to put results "." means it will put them in the same directory as this script.
-mkdir(output_path);
+mkdir(char(output_path));
 
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
 clear collection_angles
