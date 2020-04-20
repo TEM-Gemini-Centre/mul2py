@@ -27,6 +27,7 @@ setup(
         "hyperspy",
         "h5py",
         "argparse",
+        "ase",
         "tabulate"
 
     ],
