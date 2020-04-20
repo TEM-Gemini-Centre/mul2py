@@ -31,6 +31,6 @@ matlab -nodisplay -nodesktop -nosplash -r "HRTEM"
 echo "Converting results to HyperSpy format using mul2py"
 module load GCCcore/.8.2.0 Python/3.7.2
 source /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py-env/bin/activate
-python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py /lustre1/work/emilc/MULTEM/Test/HRTEM_results.ecmat
+python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py HRTEM_results.ecmat
 
 scontrol show job ${SLURM_JOB_ID} -d
