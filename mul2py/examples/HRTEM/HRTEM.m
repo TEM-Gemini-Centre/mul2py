@@ -49,7 +49,7 @@ results.images = zeros(input_multislice.nx, input_multislice.ny, length(output_m
 
 %% Fill results structure
 if length(output_multislice.data) == 1
-    results.images(:,:, t) = transpose(output_multislice.data.m2psi_tot);
+    results.images(:,:, 1) = transpose(output_multislice.data.m2psi_tot);
 else
     for t = 1:length(output_multislice.data)
         results.images(:, :, t) = transpose(output_multislice.data(t).m2psi_tot);
