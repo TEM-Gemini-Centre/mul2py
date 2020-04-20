@@ -25,7 +25,7 @@ module load foss/2016a
 module load CUDA/8.0.61
 module load MATLAB/2017a
 
-echo "Running STEM simulation"
+echo "Running HRTEM simulation"
 matlab -nodisplay -nodesktop -nosplash -r "HRTEM"
 
 echo "Converting results to HyperSpy format using mul2py"
