@@ -1,12 +1,13 @@
 #!/bin/bash
 
-#SBATCH --partition=CPUQ
+#SBATCH --partition=GPUQ
 #SBATCH --time=01-20:0:00
-#SBATCH --job-name="STEMcpu"
-#SBATCH --output=STEMcpu-%A.out
+#SBATCH --job-name="STEM"
+#SBATCH --output=STEM-%A.out
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=16
+#SBATCH --ntasks-per-node=1
 #SBATCH --mem=64000
+#SBATCH --gres=gpu:1
 #SBATCH --account=share-nv-fys-tem
 
 echo "we are running from this directory: $SLURM_SUBMIT_DIR"
@@ -25,11 +26,11 @@ module load CUDA/8.0.61
 module load MATLAB/2017a
 
 echo "Running STEM simulation"
-matlab -nodisplay -nodesktop -nosplash -r "STEMcpu"
+matlab -nodisplay -nodesktop -nosplash -r "STEM"
 
 echo "Converting results to HyperSpy format using mul2py"
 module load GCCcore/.8.2.0 Python/3.7.2
 source /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py-env/bin/activate
-python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py /lustre1/work/emilc/MULTEM/Test/STEMcpu_results.ecmat
+python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py STEM_results.ecmat
 
 scontrol show job ${SLURM_JOB_ID} -d

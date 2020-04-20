@@ -26,8 +26,8 @@ addpath(char(sprintf("%s/matlab_functions", MULTEM_path)));             % Add MU
 addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add the core MULTEM stuff to run simulations
 
 %% output_details
-simulation_name = "STEMcpu";
-output_path = "/lustre1/work/emilc/MULTEM/Test/"; %Path to put results
+simulation_name = "STEM";
+output_path = "."; %Path to put results "." means it will put them in the same directory as this script.
 mkdir(output_path);
 
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.

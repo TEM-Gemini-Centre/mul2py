@@ -216,8 +216,17 @@ For a more detailed explanation and guide, please see the notebook at [https://g
 
 ## Complete example
 
-### Model
-Run the following code in e.g. a jupyter notebook to generate the model file.
+The files you need to run a complete STEM simulation with MULTEM on the IDUN cluster is already provided in this folder. You can simply copy these files ("Al_10x10x20.mat", "STEM.m", and "STEM.slurm") to somewhere on your IDUN directory(e.g. "/lustre1/work/emilc/") and run the following command on IDUN to perform the simulation:
+
+```bash
+cd /lustre1/work/emilc/
+sbatch STEM.slurm
+```
+
+To understand these files, continue reading
+
+### The model file
+The model file was made by the following Python code:
 ```Python
 from ase.io import read
 import mul2py as m2p
@@ -234,8 +243,8 @@ dwfs = {13: 0.1006}
 m2p.io.save_multem_model('Al_10x10x20.mat', slab, B=dwfs)
 ```
 
-### Simulation
-Copy the following lines to a MATLAB script and save it as "STEM.m" in the same folder with the model you made.
+### The simulation script
+The somulation script "STEM.m" contains the following (or similar) MATLAB code
 ```MATLAB
 %%
 clear all
@@ -313,8 +322,8 @@ results.dy = output_multislice.dy;
 save(sprintf("%s/%s_results.ecmat", output_path, simulation_name), "results", "-v7.3");
 ```
 
-### SLURM
-Make the following shell script and save it as "STEM.slurm" in the same folder as the previous two files:
+### The SLURM job script
+And finally, the slurm job shell script "STEM.slurm" contains the following bash code
 ```shell script
 #!/bin/bash
 
@@ -324,8 +333,8 @@ Make the following shell script and save it as "STEM.slurm" in the same folder a
 #SBATCH --output=STEM-%A.out
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH -- gres=gpu:1
 #SBATCH --mem=64000
+#SBATCH --gres=gpu:1
 #SBATCH --account=share-nv-fys-tem
 
 echo "we are running from this directory: $SLURM_SUBMIT_DIR"
@@ -346,57 +355,18 @@ module load MATLAB/2017a
 echo "Running STEM simulation"
 matlab -nodisplay -nodesktop -nosplash -r "STEM"
 
-scontrol show job ${SLURM_JOB_ID} -d
-```
-Copy both "Al_10x10x20.mat" model file and the "STEM.m" MATLAB script to somewhere on your directory on IDUN (see other guides on how to accomplish this). Then log in to IDUN on a terminal (using e.g. PuTTY on windows) and navigate to where you moved the three files "Al_10x10x20.mat", "STEM.m" and "STEM.slurm" and submit the job:
-```bash
-cd directory_containing_your_files
-sbatch STEM.slurm
-```
- Take a cup of coffee or maybe wait a few days for the simulation to finish before proceeding
-### Conversion
-Once the simulation has finished, you can convert the results on IDUN by making another SLURM script:
-```shell script
-#!/bin/bash
-
-#SBATCH --partition=CPUQ
-#SBATCH --time=00-01:0:00
-#SBATCH --job-name="STEMConvert"
-#SBATCH --output=STEMConvert-%A.out
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=16
-#SBATCH --mem=64000
-#SBATCH --account=share-nv-fys-tem
-
-echo "we are running from this directory: $SLURM_SUBMIT_DIR"
-echo "The name of the job is: $SLURM_JOB_NAME"
-
-echo "The job ID is $SLURM_JOB_ID"
-echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
-echo "Number of nodes: $SLURM_JOB_NUM_NODES"
-echo "We are using $SLURM_CPUS_ON_NODE cores"
-
-echo "We are using $SLURM_CPUS_ON_NODE cores per node"
-echo "Total of $SLURM_NTASKS cores"
-
 echo "Converting results to HyperSpy format using mul2py"
 module load GCCcore/.8.2.0 Python/3.7.2
 source /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py-env/bin/activate
-python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py <directory_with_your_simulation_files>/STEM_results.ecmat
+python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py STEM_results.ecmat
 
 scontrol show job ${SLURM_JOB_ID} -d
 ```
-Save this shell script as "STEMconvert.slurm" somewhere on IDUN, possibly the same place as your other simulaiton files, replace `<directory_with_your_simulation_files>` with the location of your simulation files, e.g. `/lustre1/work/emilc/MULTEM/Test/STEM`. Submit the job as before
- ```bash
-cd <directory_with_your_simulation_files>
-sbatch STEMconvert.slurm
-```
-and wait for the job to finish. Once it is finished, you can transfer the resulting `<directory_with_your_simulation_files.STEM_results.hspy` to your local computer and continue with postprocessing and analysing the data
 
-### Postprocessing
+## Postprocessing
 Postprocess your data as you would with other TEM data, e.g. by making virtual images or thickness profile plots, e.g in a python script or a jupyter notebook.
 
-#### Spatial incoherence
+### Spatial incoherence
 If you have not run the simulation with spatial incoherence and numerical integration options (i.e. if you have _not_ used `input_multislice.illumination_model=4; input_multislice.temporal_spatial_incoh=1;`, which can considerably increase the simulation time and is therefore not often used), you need to "postsimulate" the effect of your probesize, by guessing on a probe shape and size, before convoluting this with your results. This can be done with
 
 ```Python
@@ -415,7 +385,7 @@ blurred_signal.plot()
 
 ```
 
-#### Thickness profiles
+### Thickness profiles
 Thickness profiles can be made by creating a region of interest centered on an atomic column, and integrating the intensity inside this region. To visualise the profile of a signal with multiple detectors, you must also choose which detector(s) to show before plotting: 
 
 ```Python
