@@ -311,39 +311,85 @@ def make_signal(filepath):
     dy = data.dy()
 
     # Set axes properties
-    if simulation_type == 'ewrs' and simulation_dimension == 5:
+    if simulation_type == 'ewrs':
         xs = data.xs()
         ys = data.ys()
-        set_axes(signal, 0, xs, name='x')
-        set_axes(signal, 1, ys, name='y')
-        set_axes(signal, 2, z, name='z')
-        set_axes(signal, 3, dx, name='X')
-        set_axes(signal, 4, dy, name='Y')
-    elif (simulation_type == 'cbed' or simulation_type == 'ped') and simulation_dimension == 5:
+        if simulation_dimension == 5:
+            set_axes(signal, 0, xs, name='x')
+            set_axes(signal, 1, ys, name='y')
+            set_axes(signal, 2, z, name='z')
+            set_axes(signal, 3, dx, name='X')
+            set_axes(signal, 4, dy, name='Y')
+        elif simulation_dimension == 4:
+            set_axes(signal, 0, xs, name='x')
+            set_axes(signal, 1, ys, name='y')
+            set_axes(signal, 3, dx, name='X')
+            set_axes(signal, 4, dy, name='Y')
+        elif simulation_dimension == 3:
+            set_axes(signal, 0, z, name='z')
+            set_axes(signal, 1, dx, name='X')
+            set_axes(signal, 2, dy, name='Y')
+        elif simulation_dimension == 2:
+            set_axes(signal, 0, dx, name='X')
+            set_axes(signal, 1, dy, name='Y')
+        else:
+            print('Simulation dimension {:.0f} is not supported for simulation type "{}": Axes are not set.'.format(
+                simulation_type))
+    elif (simulation_type == 'cbed' or simulation_type == 'ped'):
         xs = data.xs()
         ys = data.ys()
-        set_axes(signal, 0, xs, name='x')
-        set_axes(signal, 1, ys, name='y')
-        set_axes(signal, 2, z, name='z')
-        set_axes(signal, 3, dx, name='kx', units='Å^-1')
-        set_axes(signal, 4, dy, name='ky', units='Å^-1')
-    elif simulation_type == 'stem' and simulation_dimension == 4:
+        if simulation_dimension == 5:
+            set_axes(signal, 0, xs, name='x')
+            set_axes(signal, 1, ys, name='y')
+            set_axes(signal, 2, z, name='z')
+            set_axes(signal, 3, dx, name='kx', units='Å^-1')
+            set_axes(signal, 4, dy, name='ky', units='Å^-1')
+        elif simulation_dimension == 4:
+            set_axes(signal, 0, xs, name='x')
+            set_axes(signal, 1, ys, name='y')
+            set_axes(signal, 2, dx, name='kx', units='Å^-1')
+            set_axes(signal, 3, dy, name='ky', units='Å^-1')
+        elif simulation_dimension == 3:
+            set_axes(signal, 0, z, name='z')
+            set_axes(signal, 1, dx, name='kx', units='Å^-1')
+            set_axes(signal, 2, dy, name='ky', units='Å^-1')
+        elif simulation_dimension == 2:
+            set_axes(signal, 1, dx, name='kx', units='Å^-1')
+            set_axes(signal, 2, dy, name='ky', units='Å^-1')
+        else:
+            print('Simulation dimension {:.0f} is not supported for simulation type "{}": Axes are not set.'.format(
+                simulation_type))
+    elif simulation_type == 'stem':
         xs = np.linspace(data.input.scanning_x0(), data.input.scanning_xe(), int(data.input.scanning_ns()),
                          endpoint=data.input.scanning_periodic())
         ys = np.linspace(data.input.scanning_y0(), data.input.scanning_ye(), int(data.input.scanning_ns()),
                          endpoint=data.input.scanning_periodic())
-        set_axes(signal, 0, z, name='z')
-        set_axes(signal, 1, 1, name='detector', scale=1, offset=1, units='')
-        set_axes(signal, 2, xs, name='x')
-        set_axes(signal, 3, ys, name='y')
-    elif simulation_type == 'hrtem' and simulation_dimension == 3:
-        set_axes(signal, 0, z, name='z')
-        set_axes(signal, 1, dx, name='x')
-        set_axes(signal, 2, dy, name='y')
-    elif (simulation_type == 'cbed' or simulation_type == 'ped') and simulation_dimension == 3:
-        set_axes(signal, 0, z, name='z')
-        set_axes(signal, 1, dx, name='kx', units='Å^-1')
-        set_axes(signal, 2, dy, name='ky', units='Å^-1')
+        if simulation_dimension == 4:
+            set_axes(signal, 0, z, name='z')
+            set_axes(signal, 1, 1, name='detector', scale=1, offset=1, units='')
+            set_axes(signal, 2, xs, name='x')
+            set_axes(signal, 3, ys, name='y')
+        elif simulation_dimension == 3:
+            set_axes(signal, 0, z, name='z')
+            set_axes(signal, 1, xs, name='x')
+            set_axes(signal, 2, ys, name='y')
+        elif simulation_dimension == 2:
+            set_axes(signal, 0, xs, name='x')
+            set_axes(signal, 1, ys, name='y')
+        else:
+            print('Simulation dimension {:.0f} is not supported for simulation type "{}": Axes are not set.'.format(
+                simulation_type))
+    elif simulation_type == 'hrtem':
+        if simulation_dimension == 3:
+            set_axes(signal, 0, z, name='z')
+            set_axes(signal, 1, dx, name='x')
+            set_axes(signal, 2, dy, name='y')
+        elif simulation_dimension == 2:
+            set_axes(signal, 0, dx, name='x')
+            set_axes(signal, 1, dy, name='y')
+        else:
+            print('Simulation dimension {:.0f} is not supported for simulation type "{}": Axes are not set.'.format(
+                simulation_type))
     else:
         print('Did not recognize simulation type "{}" as a valid simulation type: Axes are not set.'.format(
             simulation_type))
