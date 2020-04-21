@@ -41,7 +41,7 @@ collection_angles(2).outer_ang = 200; %semi-angle (mrad)
 
 convergence_angle = 27; %semi-angle (mrad)
 
-input_multislice = STEM_setup("Al_10x10x20.mat", convergence_angle, collection_angles, "phonons", 20, "nx", 1024, "ny", 1024, "instrument", "ARM200F", "multem_path", multem_path);
+input_multislice = STEM_setup("Al_10x10x20.mat", convergence_angle, collection_angles, "phonons", 20, "nx", 1024, "ny", 1024, "instrument", "ARM200F", "multem_path", MULTEM_path);
 
 %% If you want to adjust scan parameters (default is 10 pixels spanning around the center of the model with a step a/10 in x and b/10 in y:
 %You can also change the scanning parameters in the call to STEM_setup()
