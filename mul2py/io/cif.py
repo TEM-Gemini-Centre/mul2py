@@ -124,6 +124,12 @@ class Crystal(object):
         self.nb = nb
         self.nc = nc
 
+        site_labels = set([atom.site_label for atom in self.atoms])
+        site_keys = site_labels
+        self.site_dict = {}
+        for label, key in zip(site_labels, site_keys):
+            self.site_dict[label] = key
+
     def __repr__(self):
         if len(self.atoms) > 5:
             return '{self.__class__.__name__}(atom-list, {self.cellpar})'.format(self=self)
@@ -278,6 +284,30 @@ class Crystal(object):
         """
         self.atoms.append(atom)
 
+    def intifylabels(self):
+        """
+        Change the labels to integers.
+
+        Changes the site labels of atoms to integers. The "key" is stored as well.
+
+        Returns
+        -------
+        site_dict: dict
+            A copy of the crystal site dictionary with the old site labels keys and the new labels as values
+        """
+
+        site_labels = set([atom.site_label for atom in self.atoms])
+        site_keys = np.arange(0, len(site_labels), 1, dtype=int)
+        site_dict = {}
+        for label, key in zip(site_labels, site_keys):
+            site_dict[label] = key
+
+        for atom in self.atoms:
+            atom.site_label = site_dict[atom.site_label]
+
+        self.site_dict = site_dict
+        return dict(self.site_dict)
+
     def write2mat(self, filename, dz, na=None, nb=None, nc=None):
         """
         Write the crystal to a .mat file for MULTEM
@@ -426,7 +456,7 @@ class CIFfile(object):
                 self.crystal = Crystal(atoms, cellpar)
 
 
-def convert_cif2mat(filename, dz, na=1, nb=1, nc=1):
+def convert_cif2mat(filename, dz, na=1, nb=1, nc=1, intify_labels=False):
     """
     Convert the crystal of a CIF file to .mat format
 
@@ -438,6 +468,8 @@ def convert_cif2mat(filename, dz, na=1, nb=1, nc=1):
         Slice thickness
     na, nb, nc: int, optional
         Number of crystal repetitions in crystal directions `a`, `b`, and `c`. Default is 1.
+    intify_labels: bool, optional
+        Whether to convert site labels into integers before writing the crystal to file or not. Default is False
 
     Returns
     -------
@@ -446,6 +478,8 @@ def convert_cif2mat(filename, dz, na=1, nb=1, nc=1):
     """
     ciffile = CIFfile(filename)
     ciffile.read()
+    if intify_labels:
+        ciffile.crystal.intifylabels()
     ciffile.crystal = ciffile.crystal * [na, nb, nc]
     ciffile.crystal.write2mat(dz)
     return ciffile
