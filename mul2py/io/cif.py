@@ -344,6 +344,7 @@ class Crystal(object):
             "na": self.na,
             "nb": self.nb,
             "nc": self.nc,
+            "site_keys": self.site_dict
         }
         savemat(filename.with_suffix('.mat'), matlabdict)
         print('Saved crystal to "{}"'.format(filename.with_suffix('.mat')))
