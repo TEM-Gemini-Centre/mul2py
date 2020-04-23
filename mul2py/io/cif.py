@@ -372,9 +372,9 @@ class CIFfile(object):
         """
         Read data from the CIF file
         """
-        with ReadCif(str(self.filename)) as ciffile:
+        with open(self.filename, 'r') as f:
+            ciffile = ReadCif(f)
             for block in ciffile:
-                # print(block)
                 spacegroup = Spacegroup(int(block['_space_group_IT_number']))
 
                 cellpar = np.array([
@@ -457,7 +457,7 @@ class CIFfile(object):
                 self.crystal = Crystal(atoms, cellpar)
 
 
-def convert_cif2mat(filename, dz, na=1, nb=1, nc=1, intify_labels=False):
+def convert_cif2mat(filename, dz, na=1, nb=1, nc=1, intify_labels=True):
     """
     Convert the crystal of a CIF file to .mat format
 
@@ -480,7 +480,16 @@ def convert_cif2mat(filename, dz, na=1, nb=1, nc=1, intify_labels=False):
     ciffile = CIFfile(filename)
     ciffile.read()
     if intify_labels:
+        print('Converting labels to integers')
         ciffile.crystal.intifylabels()
+
     ciffile.crystal = ciffile.crystal * [na, nb, nc]
-    ciffile.crystal.write2mat(dz)
+
+    print('Saving crystal')
+    if any([n > 1 for n in [na, nb, nc]]):
+        ciffile.crystal.write2mat(ciffile.filename.with_name(
+            '{ciffile.filename.stem}_{ciffile.crystal.na}x{ciffile.crystal.nb}x{ciffile.crystal.nc}{ciffile.filename.suffix}'.format(
+                ciffile=ciffile)), dz)
+    else:
+        ciffile.crystal.write2mat(ciffile.filename, dz)
     return ciffile
