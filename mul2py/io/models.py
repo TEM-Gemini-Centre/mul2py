@@ -33,6 +33,10 @@ def save_multem_model(filename, model, *args, dz=None, rms3d={}, B={}, **kwargs)
     ----------------
     args : optional positional arguments.
         specify 'gui' to output file for use with the MULTEM GUI.
+    kwargs: optional keyword arguments.
+        Specify order = [0, 1, 2] to adjust order of model size dimension if model cell dimensions are swapped in ASE (can happen when model is rotated).
+        Specify 'a', 'b', or 'c' to set unit cell dimension of metadata
+        Specify 'na', 'nb', or 'nc' to set number of unit cells in a, b, and c in metadata
 
     Notes
     -----
@@ -79,7 +83,10 @@ def save_multem_model(filename, model, *args, dz=None, rms3d={}, B={}, **kwargs)
         raise e
 
     # Set sample dimensions (used in file header)
-    lx, ly, lz = model.get_cell_lengths_and_angles()[:3]
+    order = kwargs.get('order', [0, 1, 2])
+    lx = model.get_cell_lengths_and_angles()[order[0]]
+    ly = model.get_cell_lengths_and_angles()[order[1]]
+    lz = model.get_cell_lengths_and_angles()[order[2]]
 
     # Get crystal unit cell vectors. Defaults to the sample dimensions. I don't think these are used directly in MULTEM anywhere.
     a = kwargs.get('a', lx)
