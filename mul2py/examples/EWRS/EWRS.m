@@ -33,7 +33,7 @@ output_path = ".";
 mkdir(char(output_path));
 
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
-convergence angle = 27.48 %semi-angle [mrad]
+convergence_angle = 27.48; %semi-angle [mrad]
 input_multislice = EWRS_setup("Al_10x10x20.mat", convergence_angle, "nx", 1024, "ny", 1024, "phonons", 20, "instrument", "ARM200F", "multem_path", MULTEM_path);
 original_input = input_multislice;
 results.system = system_conf;
