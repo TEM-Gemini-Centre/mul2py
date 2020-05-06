@@ -1,6 +1,6 @@
-% Function for setting up MULTEM CBED simulations for the JEM2100F 
+% Function for setting up MULTEM SCBED simulations for the JEM2100F
 % microscope at the TEM Gemini centre.
-% Based on the CBED example written by Ivan Lobato:
+% Based on the SCBED example written by Ivan Lobato:
 %
 % output_multislice = il_MULTEM(system_conf, input_multislice) perform TEM simulation
 % 
@@ -172,30 +172,30 @@ function [input_multislice] = CBED_setup(model_path, alpha, varargin)
     end
     
     if isstruct(aberrations)
-        input_multislice.cond_lens_c_12 = aberrations.cond_lens_c_12;                         % [A1]      2-fold astigmatism (Å)
+        input_multislice.cond_lens_c_12 = aberrations.cond_lens_c_12;                         % [A1]      2-fold astigmatism (ï¿½)
         input_multislice.cond_lens_c_phi_12 = aberrations.cond_lens_phi_12;                   % [phi_A1]	Azimuthal angle of 2-fold astigmatism (deg)
 
-        input_multislice.cond_lens_c_21 = aberrations.cond_lens_c_21;                         % [B2]      Axial coma (Å)
+        input_multislice.cond_lens_c_21 = aberrations.cond_lens_c_21;                         % [B2]      Axial coma (ï¿½)
         input_multislice.cond_lens_c_phi_21 = aberrations.cond_lens_phi_21;                   % [phi_B2]	Azimuthal angle of axial coma (deg)
 
-        input_multislice.cond_lens_c_23 = aberrations.cond_lens_c_23;                         % [A2]      3-fold astigmatism (Å)
+        input_multislice.cond_lens_c_23 = aberrations.cond_lens_c_23;                         % [A2]      3-fold astigmatism (ï¿½)
         input_multislice.cond_lens_c_phi_23 = aberrations.cond_lens_phi_23;                   % [phi_A2]	Azimuthal angle of 3-fold astigmatism (deg)
 
         input_multislice.cond_lens_c_30 = aberrations.cond_lens_c_30;                         % [C3] 		3rd order spherical aberration (mm)
 
-        input_multislice.cond_lens_c_32 = aberrations.cond_lens_c_32;                         % [S3]      Axial star aberration (Å)
+        input_multislice.cond_lens_c_32 = aberrations.cond_lens_c_32;                         % [S3]      Axial star aberration (ï¿½)
         input_multislice.cond_lens_c_phi_32 = aberrations.cond_lens_phi_32;                   % [phi_S3]	Azimuthal angle of axial star aberration (deg)
 
-        input_multislice.cond_lens_c_34 = aberrations.cond_lens_c_34;                         % [A3]      4-fold astigmatism (Å)
+        input_multislice.cond_lens_c_34 = aberrations.cond_lens_c_34;                         % [A3]      4-fold astigmatism (ï¿½)
         input_multislice.cond_lens_c_phi_34 = aberrations.cond_lens_phi_34;                   % [phi_A3]	Azimuthal angle of 4-fold astigmatism (deg)
 
-        input_multislice.cond_lens_c_41 = aberrations.cond_lens_c_41;                         % [B4]      4th order axial coma (Å)
+        input_multislice.cond_lens_c_41 = aberrations.cond_lens_c_41;                         % [B4]      4th order axial coma (ï¿½)
         input_multislice.cond_lens_c_phi_41 = aberrations.cond_lens_phi_41;                   % [phi_B4]	Azimuthal angle of 4th order axial coma (deg)
 
-        input_multislice.cond_lens_c_43 = aberrations.cond_lens_c_43;                         % [D4]      3-lobe aberration (Å)
+        input_multislice.cond_lens_c_43 = aberrations.cond_lens_c_43;                         % [D4]      3-lobe aberration (ï¿½)
         input_multislice.cond_lens_c_phi_43 = aberrations.cond_lens_phi_43;                   % [phi_D4]	Azimuthal angle of 3-lobe aberration (deg)
 
-        input_multislice.cond_lens_c_45 = aberrations.cond_lens_c_45;                         % [A4]      5-fold astigmatism (Å)
+        input_multislice.cond_lens_c_45 = aberrations.cond_lens_c_45;                         % [A4]      5-fold astigmatism (ï¿½)
         input_multislice.cond_lens_c_phi_45 = aberrations.cond_lens_phi_45;                   % [phi_A4]	Azimuthal angle of 5-fold astigmatism (deg)
 
         input_multislice.cond_lens_c_50 = aberrations.cond_lens_c_50;                         % [C5]      5th order spherical aberration (mm)
