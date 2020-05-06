@@ -28,7 +28,7 @@ addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add th
 addpath(char("/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/matlab")) % Add mul2py matlab scripts/functions to path
 
 %% output_details
-simulation_name = "HRTEM";
+simulation_name = "EWRS";
 output_path = ".";
 mkdir(char(output_path));
 
@@ -38,6 +38,10 @@ input_multislice = EWRS_setup("Al_10x10x20.mat", convergence_angle, "nx", 1024, 
 original_input = input_multislice;
 results.system = system_conf;
 
+%% Modify thickness output frequency
+slices_every = 4;
+input_multislice.thick = (0:input_multislice.spec_dz*slices_every:input_multislice.spec_lz); %output an image every 4 slices
+
 %% Set up scan pattern
 centre_x = original_input.spec_lx/2;
 centre_y = original_input.spec_ly/2;
@@ -45,8 +49,8 @@ centre_y = original_input.spec_ly/2;
 scanning_width = original_input.spec_cryst_a;
 scanning_height = original_input.spec_cryst_b;
 
-scanning_ns_x = 2;
-scanning_ns_y = 3;
+scanning_ns_x = 25;
+scanning_ns_y = 25;
 
 x0 = centre_x - scanning_width/2;
 y0 = centre_y - scanning_height/2;
