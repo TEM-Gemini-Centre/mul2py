@@ -28,19 +28,17 @@ addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add th
 addpath(char("/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/matlab")) % Add mul2py matlab scripts/functions to path
 
 %% output_details
-simulation_name = "EWRS";
+simulation_name = "SCBED";
 output_path = ".";
 mkdir(char(output_path));
 
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
-convergence_angle = 27.48; %semi-angle [mrad]
-input_multislice = EWRS_setup("Al_10x10x20.mat", convergence_angle, "nx", 1024, "ny", 1024, "phonons", 20, "instrument", "ARM200F", "multem_path", MULTEM_path);
-original_input = input_multislice;
-results.system = system_conf;
+convergence_angle = 7.5; %semi-angle [mrad]
+input_multislice = CBED_setup("Al_10x10x20.mat", convergence_angle, "nx", 1024, "ny", 1024, "phonons", 20, "instrument", "2100F", "multem_path", MULTEM_path);
 
-%% Modify thickness output frequency
-slices_every = 4;
-input_multislice.thick = (0:input_multislice.spec_dz*slices_every:input_multislice.spec_lz); %output an image every 4 slices
+%% Make results struct and add inputs and system configuration
+results.system = system_conf;
+results.input = input_multislice;
 
 %% Set up scan pattern
 centre_x = original_input.spec_lx/2;
@@ -49,8 +47,8 @@ centre_y = original_input.spec_ly/2;
 scanning_width = original_input.spec_cryst_a;
 scanning_height = original_input.spec_cryst_b;
 
-scanning_ns_x = 25;
-scanning_ns_y = 25;
+scanning_ns_x = 2;
+scanning_ns_y = 3;
 
 x0 = centre_x - scanning_width/2;
 y0 = centre_y - scanning_height/2;
@@ -62,32 +60,39 @@ ye = x0 + scanning_height;
 xs = linspace(x0, xe, scanning_ns_x);
 ys = linspace(y0, ye, scanning_ns_y);
 
-%% Loop through x and y positions
-results.input = original_input;
+%% Store scan positions in results struct
 results.xs = xs;
 results.ys = ys;
+
+%% Pre-allocate image array and thickness cell
 results.images = zeros(input_multislice.nx, input_multislice.ny, size(xs, 2), size(ys, 2), size(input_multislice.thick, 2));
 results.thicknesses = {};
+
+%% Loop through x and y positions
 counter = 1;
 for i = 1:size(results.xs, 2)
-    x = xs(i);
     for j = 1:size(results.ys, 2)
-        y = ys(j);
+
         %shift beam
-        input_multislice = original_input;
-        input_multislice.iw_x = x;
-        input_multislice.iw_y = y;
+        input_multislice.iw_x = xs(i);
+        input_multislice.iw_y = ys(j);
+
+        %Print some scan info
+        fprintf("Simulating EWRS stack %i of %i: (x,y) = (%f,%f)\r", counter, length(xs) * length(ys), input_multislice.iw_x, input_multislice.iw_y);
 
         %Run simulation
-        fprintf("Simulating EWRS stack %i of %i: (x,y) = (%f,%f)\r", counter, length(xs) * length(ys), input_multislice.iw_x, input_multislice.iw_y);
         clear il_MULTEM;
         tic;
         output_multislice = il_MULTEM(system_conf, input_multislice);
         toc;
+
+        %Store thickness positions of output
         results.thicknesses{i, j} = output_multislice.thick;
-        try
+
+        %Store result
+        try %Try-catch to fail with som extra info and save the data so far.
             for t = 1:length(output_multislice.data)
-                results.images(:, :, i, j, t) = transpose(output_multislice.data(t).m2psi_tot);
+                results.images(:, :, i, j, t) = transpose(output_multislice.data(t).m2psi_tot); %Must be transposed to import to Hyperspy easier
             end
         catch ME
             fprintf("Exception for i=%i, j=%i, and t=%i. Data size: (%s)", i, j, t, strip(sprintf("%i,", size(output_multislice.data)), "right", ","));
@@ -95,8 +100,11 @@ for i = 1:size(results.xs, 2)
             save(sprintf("%s/%s_%i_%i_%i_results.ecmat", output_path, simulation_name, i, j, t), "results", "-v7.3");
             rethrow(ME)
         end
+
         counter=counter+1;
+
     end
+
 end
 
 %% Set some additional details
