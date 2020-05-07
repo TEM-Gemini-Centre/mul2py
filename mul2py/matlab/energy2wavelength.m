@@ -8,5 +8,5 @@ function [wavelength] = energy2wavelength(E0)
     E0 = E0*1E3;    %kV to V
 
     wavelength =  h / (sqrt(2 * m0 * e * E0 * (1. + e * E0 / (2. * m0 * c^2)))); %wavelength in m
-    wavelength = wavelength * 1E10 %m to Å
+    wavelength = wavelength * 1E10; %m to Å
 end

@@ -73,7 +73,7 @@ function [results] = run_STEM_simulation(model_path, alpha, collection_angles, v
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Simulation Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice = STEM_setup(model_path, alpha, collection_angles, varargin{:})
+    input_multislice = STEM_setup(model_path, alpha, collection_angles, varargin{:});
 
     %%%%%%%%%%%%%%%%%%%%%%%%% System Setup %%%%%%%%%%%%%%%%%%%%%%%%
     system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2

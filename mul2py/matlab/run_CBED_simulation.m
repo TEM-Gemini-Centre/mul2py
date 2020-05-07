@@ -73,7 +73,7 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Simulation Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice = CBED_setup(model_path, varargin{:})
+    input_multislice = CBED_setup(model_path, varargin{:});
 
     %%%%%%%%%%%%%%%%%%%%%%%%% System Setup %%%%%%%%%%%%%%%%%%%%%%%%
     system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2

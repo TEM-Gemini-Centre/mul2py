@@ -42,7 +42,7 @@ function [aberrations] = JEM2100F_aberrations()
     aberrations.obj_lens_c_23 = 0.00;                          % [A2]      3-fold astigmatism (?)
     aberrations.obj_lens_phi_23 = 0.00;                        % [phi_A2]	Azimuthal angle of 3-fold astigmatism (?)
 
-    aberrations.obj_lens_c_30 = 1.0;                         % [C3] 		3rd order spherical aberration (mm)
+    aberrations.obj_lens_c_30 = 1.0;                         % [C3] 		3rd order spherical aberration (mm)    aberrations.obj_lens_c_30 = 1.0*1e-3;                         % [C3] 		3rd order spherical aberration (m) What unit is this actually? mm or m?!
     aberrations.obj_lens_c_32 = 0.00;                          % [S3]      Axial star aberration (?)
     aberrations.obj_lens_phi_32 = 0.00;                        % [phi_S3]	Azimuthal angle of axial star aberration (?)
     aberrations.obj_lens_c_34 = 0.00;                          % [A3]      4-fold astigmatism (?)
