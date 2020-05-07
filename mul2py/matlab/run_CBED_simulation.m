@@ -8,6 +8,7 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
 
     %Parser object
     p = inputParser;
+    p.KeepUnmatched = true;
 
     %Value checkers
     validStrChar = @(x) ischar(x) || isstring(x);
@@ -33,6 +34,10 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     %Path to MULTEM installation
     default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
     addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
+
+    %Save results, or only return them?
+    default_save = 1;
+    addParameter(p, "save", default_save, validPositiveNumber)
 
     %Where to put output
     default_output_path = './'
@@ -63,10 +68,12 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     addpath(char(sprintf("%s/mex_bin", p.Results.MULTEM_path)));
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Make Output Path %%%%%%%%%%%%%%%%%%%%%%%%
-    mkdir(char(output_path));
+    if p.Results.save
+        mkdir(char(p.Results.output_path));
+    end
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Simulation Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice = HRTEM_setup(model_path, varargin)
+    input_multislice = CBED_setup(model_path, varargin{:})
 
     %%%%%%%%%%%%%%%%%%%%%%%%% System Setup %%%%%%%%%%%%%%%%%%%%%%%%
     system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2
@@ -106,6 +113,7 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     results.elapsed_time = seconds(end_time - start_time);
 
     %% Save the data
-    save(sprintf("%s/%s_results.ecmat", output_path, simulation_name), "results", "-v7.3");
-
+    if p.Results.save
+        save(sprintf("%s/%s_results.ecmat", p.Results.output_path, p.Results.simulation_name), "results", "-v7.3");
+    end
 end
