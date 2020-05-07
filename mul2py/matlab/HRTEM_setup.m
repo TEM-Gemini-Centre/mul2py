@@ -103,6 +103,9 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     % eTEMST_EELS=61, eTEMST_EFTEM=62, eTEMST_ProbeFS=71, eTEMST_ProbeRS=72, eTEMST_PPFS=81, eTEMST_PPRS=82,eTEMST_TFFS=91, eTEMST_TFRS=92
     input_multislice.simulation_type = 32;
 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%% Incident wave %%%%%%%%%%%%%%%%%%%%%%%%%%
+    input_multislice.iw_type = 1;   % 1: Plane_Wave, 2: Convergent_wave, 3:User_Define, 4: auto
+
     %%%%%%%%%%%%%% Electron-Specimen interaction model %%%%%%%%%%%%%%%%%
     input_multislice.interaction_model = 1;              % eESIM_Multislice = 1, eESIM_Phase_Object = 2, eESIM_Weak_Phase_Object = 3
     input_multislice.potential_type = 6;                 % ePT_Doyle_0_4 = 1, ePT_Peng_0_4 = 2, ePT_Peng_0_12 = 3, ePT_Kirkland_0_12 = 4, ePT_Weickenmeier_0_12 = 5, ePT_Lobato_0_12 = 6
@@ -196,19 +199,19 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     input_multislice.obj_lens_c_10 = defocus;
 
     %%%%%%%%% defocus spread function %%%%%%%%%%%%
-    dsf_sigma = il_iehwgd_2_sigma(32); % from defocus spread to standard deviation
-    input_multislice.obj_lens_dsf_sigma = dsf_sigma;   % standard deviation (�)
-    input_multislice.obj_lens_dsf_npoints = 5;         % # of integration points. It will be only used if illumination_model=4
+    %dsf_sigma = il_iehwgd_2_sigma(32); % from defocus spread to standard deviation
+    %input_multislice.obj_lens_dsf_sigma = dsf_sigma;   % standard deviation (�)
+    %input_multislice.obj_lens_dsf_npoints = 5;         % # of integration points. It will be only used if illumination_model=4
 
     %%%%%%%%% zero defocus reference %%%%%%%%%%%%
     input_multislice.obj_lens_zero_defocus_type = 1;   % eZDT_First = 1, eZDT_User_Define = 2
     input_multislice.obj_lens_zero_defocus_plane = 0;
 
     %%%%%%%%%% source spread function %%%%%%%%%%%%
-    ssf_sigma = il_hwhm_2_sigma(0.45); % half width at half maximum to standard deviation
+    ssf_sigma = il_mrad_2_sigma(input_multislice.E_0, 0.02); % mrad to standard deviation% half width at half maximum to standard deviation
     input_multislice.cond_lens_ssf_sigma = ssf_sigma;  	% standard deviation: For parallel ilumination(�^-1); otherwise (�)
     input_multislice.cond_lens_ssf_npoints = 4;         % # of integration points. It will be only used if illumination_model=4
-    
+
     if p.Results.print_details
         fprintf("**** Set up MULTEM HRTEM simulation for instrument '%s' ****\n\n%s\n", p.Results.instrument, print_simulation_details(input_multislice, "MULTEM_path", p.Results.MULTEM_path))
     end
