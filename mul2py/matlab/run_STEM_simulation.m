@@ -21,7 +21,7 @@ function [results] = run_STEM_simulation(model_path, alpha, collection_angles, v
 
     %CPU or GPU
     default_device = 2; % eD_CPU = 1, eD_GPU = 2
-    addParameter(p, "device", default_device, valid1or2)
+    addParameter(p, "device", default_device, valid1or2);
 
     %Number of CPUs
     default_cpu_nthread = 1; %Number of CPUs
@@ -29,7 +29,7 @@ function [results] = run_STEM_simulation(model_path, alpha, collection_angles, v
 
     %Which GPU device to use?
     default_gpu_device = 1; % MULTEM can only use one GPU device at the time? Only ask for a single GPU from IDUN, and use this.
-    addParameter(p, "gpu_device", default_gpu_device, validPositiveNumber)
+    addParameter(p, "gpu_device", default_gpu_device, validPositiveNumber);
 
     %Path to MULTEM installation
     default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
@@ -37,15 +37,15 @@ function [results] = run_STEM_simulation(model_path, alpha, collection_angles, v
 
     %Save results, or only return them?
     default_save = 1;
-    addParameter(p, "save", default_save, validPositiveNumber)
+    addParameter(p, "save", default_save, validPositiveNumber);
 
     %Where to put output
-    default_output_path = './'
-    addParameter(p, "output_path", default_output_path, validStrChar)
+    default_output_path = './';
+    addParameter(p, "output_path", default_output_path, validStrChar);
 
     %What to label the output
-    default_simulation_name = 'STEM'
-    addParameter(p, "simulation_name", default_simulation_name, validStrChar)
+    default_simulation_name = 'STEM';
+    addParameter(p, "simulation_name", default_simulation_name, validStrChar);
 
     %Print parser info?
     default_print_parser = 0;
