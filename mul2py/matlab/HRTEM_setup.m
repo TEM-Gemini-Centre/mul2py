@@ -27,6 +27,8 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
     
     p = inputParser;
+    p.KeepUnmatched = true;
+
     validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
     validScalarNum = @(x) isnumeric(x) && isscalar(x);
     validStrChar = @(x) ischar(x) || isstring(x);
