@@ -16,7 +16,7 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     default_defocus = nan;
     default_nx = 1024;
     default_ny = 1024;
-    default_bwl = 1;
+    default_bwl = 0;
     default_E0 = 200;
     default_phonons = 20;
     default_thick_type = 2;
@@ -189,7 +189,7 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     end
     
     if isnan(p.Results.defocus)
-    	defocus = il_scherzer_defocus(input_multislice.E_0, input_multislice.obj_lens_c_30);
+    	defocus = scherzer_defocus(input_multislice.E_0, input_multislice.obj_lens_c_30);%il_scherzer_defocus(input_multislice.E_0, input_multislice.obj_lens_c_30);
     else
         defocus = p.Results.defocus;
     end
