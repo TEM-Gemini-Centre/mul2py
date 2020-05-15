@@ -5,36 +5,42 @@ This is a user guide to introduce mul2py and [MULTEM](https://github.com/Ivanlh2
   - [2 Installation](#2-installation)
     - [2.1 Clone mul2py](#21-step-1-clone-mul2py)
       - [2.1.1 Update mul2py](#211-to-update-mul2py)
-    - [2.2 Virtual Environments](#22-step-2-activatecreate-environment)
+    - [2.2 Virtual environments](#22-step-2-activatecreate-environment)
     - [2.3 Install mul2py](#23-step-3-add-mul2py-to-environment)
   - [3 Convert MULTEM results](#3-convert-multem-results)
-    - [3.1 Working Concept](#31-working-concept)
+    - [3.1 Working concept](#31-working-concept)
   - [4 Plotting images and making movies](#4-plotting-images-and-exporting-data-for-movies)
-  - [5 Making Models](#5-making-models)
-  - [6 Running Simulations](#6-running-multem-simulations)
-    - [6.1 Adding paths](#61-add-multem-paths-to-workspace)
-    - [6.2 Setting system configuration](#62-specify-system-configuration)  
-    - [6.3 Input parameters](#63-specify-input-parameters)
-      - [6.3.1 Default parameters](#631-set-up-input-parameters)
-      - [6.3.2 Simulation type](#632-set-the-simulation-type)
-      - [6.3.3 Specimen interacion model](#633-set-the-electron-specimen-interaction-model)
-      - [6.3.4 Load model file](#634-load-a-model-file-see-making-models-for-details)
-      - [6.3.5 Output frequency](#635-set-slicing-and-when-to-output-results)
-      - [6.3.6 Phonon interaction](#636-set-electron-phonon-interaction)
-      - [6.3.7 Potential sampling (resolution and number of beams)](#637-set-potential-sampling)
-      - [6.3.8 Acceleration voltage and beam tilt](#638-set-acceleration-voltage-and-beam-tilt)
-      - [6.3.9 Illumination model](#639-set-the-illumination-model)
-      - [6.3.10 Condeser lens parameters](#6310-set-condenser-lens-parmeters)
-      - [6.3.11 Temporal incoherence](#6311-set-the-defocus-spread-function-temporal-incoherence)
-      - [6.3.12 Spatial incoherence](#6312-set-the-source-spread-function-spatial-incoherence)
-      - [6.3.13 Defocus reference](#6313-specify-the-zero-defocus-reference)
-      - [6.3.14 Detectors](#6314define-detectors)
-      - [6.3.15 Scan pattern](#6315define-the-scan-pattern)
-    - [6.4 Setup functions](#64-setup-functions)
-      - [6.4.1 STEM](#641-stem_setupm)
-      - [6.4.2 HRTEM](#642-hrtem_setupm)
-      - [6.4.3 CBED](#643-cbed_setupm)
-      - [6.4.4 EWRS](#644-ewrs_setupm)
+  - [5 Making models](#5-making-models)
+  - [6 Running MULTEM simulations](#6-running-multem-simulations)
+    - [6.1 Running simulations from shell](#61-running-simulations-from-shell)
+    - [6.2 Calling matlab scripts from shell](#62-calling-matlab-script-from-shell)
+        - [6.2.1 Running run-functions through a script](#621-running-run_simulation-type_simulation-through-a-script)
+        - [6.2.2 Running simulations using set-up functions](#622-running-simulations-using-setup-files)
+        - [6.2.3 Writing your matlab script from scratch](#623-writing-your-complete-matlab-script-yourself)
+  - [7 MULTEM input parameters](#7-multem-input-parameters)
+    - [7.1 Adding paths](#71-add-multem-paths-to-workspace)
+    - [7.2 Setting system configuration](#72-specify-system-configuration)  
+    - [7.3 Input parameters](#73-specify-input-parameters)
+      - [7.3.1 Default parameters](#731-set-up-input-parameters)
+      - [7.3.2 Simulation type](#732-set-the-simulation-type)
+      - [7.3.3 Specimen interacion model](#733-set-the-electron-specimen-interaction-model)
+      - [7.3.4 Load model file](#734-load-a-model-file-see-making-models-for-details)
+      - [7.3.5 Output frequency](#735-set-slicing-and-when-to-output-results)
+      - [7.3.6 Phonon interaction](#736-set-electron-phonon-interaction)
+      - [7.3.7 Potential sampling (resolution and number of beams)](#737-set-potential-sampling)
+      - [7.3.8 Acceleration voltage and beam tilt](#738-set-acceleration-voltage-and-beam-tilt)
+      - [7.3.9 Illumination model](#739-set-the-illumination-model)
+      - [7.3.10 Condeser lens parameters](#7310-set-condenser-lens-parmeters)
+      - [7.3.11 Temporal incoherence](#7311-set-the-defocus-spread-function-temporal-incoherence)
+      - [7.3.12 Spatial incoherence](#7312-set-the-source-spread-function-spatial-incoherence)
+      - [7.3.13 Defocus reference](#7313-specify-the-zero-defocus-reference)
+      - [7.3.14 STEM Detectors](#7314-define-stem-detectors)
+      - [7.3.15 STEM Scan pattern](#7315-define-stem-scan-pattern)
+    - [7.4 Setup functions](#74-setup-functions)
+      - [7.4.1 STEM](#741-stem_setupm)
+      - [7.4.2 HRTEM](#742-hrtem_setupm)
+      - [7.4.3 CBED](#743-cbed_setupm)
+      - [7.4.4 EWRS](#744-ewrs_setupm)
 ## 1 Introduction
 mul2py is made to simplify analysis of MULTEM simulation results by providing tools to convert ".mat" and ".ecmat" files to HyperSpy signals. This is very much a developing package and there are many bugs and possible pitfalls, so it should be used carefully.
 
@@ -239,11 +245,207 @@ MULTEM simulations are run in MATLAB by calling
 ```MATLAB
 output_multislice = IL_MULTEM(system_conf, input_multislice);
 ```
-The `system_conf` and `input_multislice` are `struct` variables that are used to define the system configuration (CPU/GPU) and the input to the multislice simulation (specifying acceleration voltage, mode, specimen/atoms etc)
+The `system_conf` and `input_multislice` are `struct` variables that are used to define the system configuration (CPU/GPU) and the input to the multislice simulation (specifying acceleration voltage, mode, specimen/atoms etc). Different fields in `input_multislice` are used depending on what kind of simulation experiment you are doing (HRTEM, STEM, CBED, etc), and in some cases, different fields have different units. Because most simulations of a particular type are very similar in terms of e.g. aberrations, defocus spread functions, and so on, mul2py provides some setup functions to help users focus on the parameters that are important for their particular case (the potential sampling, scanning, and convergence angles for instance). These setup functions take some required and optional parameters for certain fields, and use sensible values for the other input parameters that users don't need to consider as much. Please see However, when performing simulations to be used in publications and as a foundation for research, the user should always make their `input_multislice` themselves to be sure exactly what they are doing. 
+
+In addition to the setup functions, mul2py also comes with a set of functions to wrap the setup, simulation, and results creation into one handy command. This is useful, because even if the input parameters themselves can be generated easily with the setup functions, performing the simulations by running a script that defines the `system_conf` and results construction is cumbersome - especially if you want to convert the results right after in the same shell script. Therefore, the `run_<simulation-type>_simulation()` functions are very useful for running your simulations without the need for a separate matlab script and to pass on variables directly from e.g. shell scripts instead.
 
 [Up](#content)
 
-### 6.1 Add MULTEM paths to workspace
+### 6.1 Running simulations from shell
+Running simulations "directly" from a shell script requires the use of a `run_<simulation-type>_simulation()` function, for example by calling `matlab -nodisplay -nodesktop -nosplash -r "run_HRTEM_simulation('<model-name>.mat'`. These functions require some information you must pass on in the shell script, such as the model name, and other optional parametes such as the sampling resolution. These values can also be passed on to the function using normal shell or bash syntax. For a simulation on the IDUN cluster, a shell script could like like this:
+```shell script
+#!bin/bash
+
+#SBATCH --partition=GPUQ #Which partition to use
+#SBATCH --time=00-00:15:00 #The allocated time
+#SBATCH --job-name="Si2HfHRTEM" #The job name
+#SBATCH --output=Si2Hf_HRTEM-%A.out #Where to put screen-output
+#SBATCH --nodes=1 #The number of nodes
+#SBATCH --ntasks-per-node=4 #The number of CPUs per node
+#SBATCH --mem=64000 #The memory you need
+#SBATCH --account=share-nv-fys-tem #Which account to use
+#SBATCH --gres=gpu:1 #Whether or not you require GPU resources. Comment out if you are running on CPUQ
+
+#Print some info about the job
+echo "we are running from this directory: $SLURM_SUBMIT_DIR"
+echo "The name of the job is: $SLURM_JOB_NAME"
+
+echo "The job ID is $SLURM_JOB_ID"
+echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_JOB_NUM_NODES"
+echo "We are using $SLURM_CPUS_ON_NODE cores"
+
+echo "We are using $SLURM_CPUS_ON_NODE cores per node"
+echo "Total of $SLURM_NTASKS cores"
+
+#Load required modules
+module load foss/2016a
+module load CUDA/8.0.61
+module load MATLAB/2017a
+
+#*** Define some parameters to be passed to the run_<simulation-type>_simulation() function ***
+
+#device=1 #CPU
+device=2 #GPU
+
+nx=1024 #The potential sampling to use (in X)
+ny=1024 #The potential sampling to use (in Y)
+instrument="2100F" #The instrument to use (determines aberrations, and will later determine source spread functions and defocus spread functions as well). Should be "2100F" or "ARM200F".
+
+simulation_name="Si2Hf_101_8x3x150_HRTEM_${nx}x${ny}" #Name of your simulation. Results will be named "${simulation_name}_results.ecmat". Should match that of the model in this script
+model_name="${simulation_name}.mat" #The model name
+simulation_name="${simulation_name}_${instrument}" #Append the instrument to the simulation name - useful for performing simulations of the same model with different instruments
+
+echo "Running HRTEM simulation: ${simulation_name}"
+
+#Run a HRTEM simulation
+# This line performs the MATLAB stuff. Remember to put `' '` around variables that should be passed as strings!
+matlab -nodisplay -nodesktop -nosplash -r "addpath('/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/matlab'); run_HRTEM_simulation('$model_name','nx', $nx, 'ny', $ny, 'instrument', '$instrument', 'simulation_name', '${simulation_name}', 'print_parser', 1, 'print_details', 1, 'cpu_nthreads', $SLURM_NTASKS, 'device', $device);"
+
+echo "Converting results to HyperSpy format using mul2py"
+module load GCCcore/.8.2.0 Python/3.7.2
+source /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py-env/bin/activate
+python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py "${simulation_name}_results.ecmat"
+
+scontrol show job ${SLURM_JOB_ID} -d
+```
+
+[Up](#content)
+
+### 6.2 Calling MATLAB script from shell
+Alternatively, the simulation can be performed in a separate MATLAB script (called e.g. "multem.m") that is then run from the shell script with `matlab -nodisplay -nodesktop -nosplash -r "multem.m"`. In this case, there are many options for how to create your matlab script. You can either have a matlab script that does everything from defining input parameters, running the simulation, and constructing your results, or you can have a matlab script that uses some or all of the help functions of mul2py. This makes the shell script appear cleaner, but you must keep track of your input arguments and what your outputs are called yourself. A typical shell script would therefore look like this
+```shell script
+#!bin/bash
+
+#SBATCH --partition=GPUQ #Which partition to use
+#SBATCH --time=00-00:15:00 #The allocated time
+#SBATCH --job-name="Si2HfHRTEM" #The job name
+#SBATCH --output=Si2Hf_HRTEM-%A.out #Where to put screen-output
+#SBATCH --nodes=1 #The number of nodes
+#SBATCH --ntasks-per-node=1 #The number of CPUs per node. Make sure this matches the number of CPUs in the matlab script!
+#SBATCH --mem=64000 #The memory you need
+#SBATCH --account=share-nv-fys-tem #Which account to use
+#SBATCH --gres=gpu:1 #Whether or not you require GPU resources. Comment out if you are running on CPUQ. Make sure this matches the device you choose in the matlab script (device 1 or device 2)!
+
+#Print some info about the job
+echo "we are running from this directory: $SLURM_SUBMIT_DIR"
+echo "The name of the job is: $SLURM_JOB_NAME"
+
+echo "The job ID is $SLURM_JOB_ID"
+echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_JOB_NUM_NODES"
+echo "We are using $SLURM_CPUS_ON_NODE cores"
+
+echo "We are using $SLURM_CPUS_ON_NODE cores per node"
+echo "Total of $SLURM_NTASKS cores"
+
+#Load required modules
+module load foss/2016a
+module load CUDA/8.0.61
+module load MATLAB/2017a
+
+echo "Running HRTEM simulation: ${simulation_name}"
+
+#Run a HRTEM simulation
+# This line performs the MATLAB stuff. Make sure that the resource allocation (the SBATCH stuff) matches what you use in the matlab script.
+matlab -nodisplay -nodesktop -nosplash -r "multem.m"
+
+echo "Converting results to HyperSpy format using mul2py"
+module load GCCcore/.8.2.0 Python/3.7.2
+source /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py-env/bin/activate
+#Make sure the output from the matlab script is called "HRTEM_results.ecmat"
+python /lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/examples/convert_ecmat.py "HRTEM_results.ecmat"
+
+scontrol show job ${SLURM_JOB_ID} -d
+```
+Note that you must keep track of what your simulation results are called yourself, and that the resources you ask for in the shell script matches those you use in the matlab script.
+
+[Up](#content)
+
+#### 6.2.1 Running `run_<simulation-type>_simulation()` through a script
+A MATLAB script using the `run_<simulaiton-type>_simulation()` function would look like this:
+```matlab
+addpath('/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/matlab');
+
+run_HRTEM_simulation('Si2Hf_101_8x3x150_HRTEM_1024_1024.mat','nx', 1024, 'ny', 1024, 'instrument', '2100F', 'simulation_name', 'HRTEM', 'print_parser', 1, 'print_details', 1, 'cpu_nthreads', 1, 'device', 2);
+```
+
+[Up](#content)
+
+#### 6.2.2 Running simulations using setup files
+You can write longer matlab scripts to execute to have more control yourself, but this will also increase the chance of errors. You can still use the setup files as a basis, and then modify them in the script. For instance, you can create your "multem.m" script using `HRTEM_setup()` to prepare the simulation parameters, and then change e.g. the defocus value. However, this also require you to set up other things as well, such as the system configuration, the paths used by the script, and to make sure the output is stored in a sensible way.
+```matlab
+%%
+clear all
+clc
+%% System configuration
+
+system_conf.precision = 1;               % eP_Float = 1, eP_double = 2
+system_conf.device = 2;                  % eD_CPU = 1, eD_GPU = 2
+system_conf.cpu_nthread = 5; 			 % Does the number of CPU threads matter when running on GPU?
+system_conf.gpu_device = 1;				 % Which GPU device to use (if several are registered)
+
+%% Timestamp
+start_time = datetime('now','TimeZone','local');
+fprintf("Starting simulation script at %s\n", start_time);
+
+%% Paths
+MULTEM_path = "/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM";  % Path to MULTEM installation on the cluster
+addpath(char(sprintf("%s/crystalline_materials", MULTEM_path)));        % Add the crystalline materials function to the path (used for making models on the go if you want)
+addpath(char(sprintf("%s/matlab_functions", MULTEM_path)));             % Add MULTEM matlab functions, such as `multem_default_values()` to the path.
+addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add the core MULTEM stuff to run simulations
+
+addpath(char("/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/mul2py/mul2py/matlab")) % Add mul2py matlab scripts/functions to path
+
+%% output_details
+simulation_name = "HRTEM";
+output_path = ".";
+mkdir(char(output_path));
+
+%% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
+input_multislice = HRTEM_setup("/lustre1/work/emilc/AlSiMgHf/MULTEM/101/Si2Hf_101_8x3x150_HRTEM_1024.mat", "nx", 1024, "ny", 1024, "bwl", 0, "phonons", 20, "instrument", "2100F", "multem_path", MULTEM_path);
+input_multislice.obj_lens_c_10 = scherzer_defocus(input_multislice.E_0, input_multislice.obj_lens_c_30);
+
+%% Run simulation
+clear il_MULTEM;
+tic;
+output_multislice = il_MULTEM(system_conf, input_multislice);
+toc;
+
+%% Create results struct
+results.input = input_multislice;
+results.system = system_conf;
+results.images = zeros(input_multislice.nx, input_multislice.ny, length(output_multislice.data));
+
+%% Fill results structure
+if length(output_multislice.data) == 1
+    results.images(:,:, 1) = transpose(output_multislice.data.m2psi_tot);
+else
+    for t = 1:length(output_multislice.data)
+        results.images(:, :, t) = transpose(output_multislice.data(t).m2psi_tot);
+    end
+end
+
+%% Set some additional details
+results.thick = output_multislice.thick;
+results.dx = output_multislice.dx;
+results.dy = output_multislice.dy;
+
+end_time = datetime('now','TimeZone','local');
+fprintf("Simulation finished at %s\n", end_time);
+results.elapsed_time = seconds(end_time - start_time);
+
+%% Save the data
+save(sprintf("%s/%s_results.ecmat", output_path, simulation_name), "results", "-v7.3");
+```
+
+[Up](#content)
+
+#### 6.2.3 Writing your complete matlab script yourself
+Writing your own MATLAB script for doing MULTEM simulations is not difficult and is the normal way of doing it, but it requires some experience and trial-and-error. In the next sections, the steps are gone through step-by-step, and the various fields are explained. However, for more detailed explanations, please see the official MULTEM distribution pages.
+
+## 7 MULTEM input parameters
+### 7.1 Add MULTEM paths to workspace
 Before you can run MULTEM, you must add the MULTEM paths to the workspace. This can be done by the following MATLAB code
 ```MATLAB
 MULTEM_path = "/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM";  % Path to MULTEM installation on the cluster
@@ -254,7 +456,7 @@ addpath(char(sprintf("%s/mex_bin", MULTEM_path)));                      % Add th
 
 [Up](#content)
 
-### 6.2 Specify system configuration
+### 7.2 Specify system configuration
 To run simulations, you must also tell MULTEM what kind of system configuration you want it to use (number of CPUs or if you want to use GPU). This is done by creating a `struct` and defining certain fields with specific names (these fields will be extracted later by MULTEM; so it is important that they are named correctly!). The following defines a system configuration that will use 4 CPUs.
 ```MATLAB
 system_conf.system_conf.precision = 1;              % eP_Float = 1, eP_double = 2
@@ -265,28 +467,28 @@ system_conf.gpu_device = 0;                         % which GPU device to use (o
 
 [Up](#content)
 
-### 6.3 Specify input parameters
+### 7.3 Specify input parameters
 Next, the input parameters to the multislice simulation must be defined. This is also done in a `struct` with specific fields. This is very sensitive to bugs, as you really have to specify the correct names. Normally, you would load the default MULTEM parameters using the `multem_default_values()` function, and then overwrite/change the fields you want/need. However, this means, that if you have typo, e.g. `input_multislice.smimulation_type=11` instead of the correct `input_multislice.simulation_type=11`, MULTEM will use whatever value that is assigned to `input_multislice.simulation_type` in `multem_default_values()`. In other words, be careful when setting up your simulation parameters! mul2py also provides a set of help-functions for setting up simulations with common input parameters (and with easy modification of these), see section [6.4](#64-setup-functions) for a list of these functions and how to use them.
 
 The following code sets up a STEM simulation in MULTEM. For other simulation types, other fields in `input_Multislice` are used and must be changed instead. The best way of figuring out what parameters to use/change for the different simulation modes is by chekcing out the MULTEM examples. 
 
 [Up](#content)
 
-#### 6.3.1 Set up input parameters
+#### 7.3.1 Set up input parameters
 ```MATLAB
 input_multislice = multem_default_values();         % Loads default values
 ```
 
 [Up](#content)
 
-#### 6.3.2 Set the simulation type
+#### 7.3.2 Set the simulation type
 ```MATLAB
 input_multislice.simulation_type = 11; % STEM type
 ```
 
 [Up](#content)
 
-#### 6.3.3 Set the electron-specimen interaction model
+#### 7.3.3 Set the electron-specimen interaction model
 ```MATLAB
 input_multislice.interaction_model = 1;              % eESIM_Multislice = 1, eESIM_Phase_Object = 2, eESIM_Weak_Phase_Object = 3
 input_multislice.potential_type = 6;                 % ePT_Doyle_0_4 = 1, ePT_Peng_0_4 = 2, ePT_Peng_0_12 = 3, ePT_Kirkland_0_12 = 4, ePT_Weickenmeier_0_12 = 5, ePT_Lobato_0_12 = 6
@@ -294,7 +496,7 @@ input_multislice.potential_type = 6;                 % ePT_Doyle_0_4 = 1, ePT_Pe
 
 [Up](#content)
 
-#### 6.3.4 Load a model file? See "Making models" for details
+#### 7.3.4 Load a model file? See "Making models" for details
 ```MATLAB
 load(p.Results.model_path);                 % This should load `spec_atoms`, `spec_lx`, `spec_ly`, `spec_lz`, `spec_dz`, `a`, `b`, `c`, `na`, `nb`, and `nc` into the MATLAB workspace.
 input_multislice.spec_atoms = spec_atoms;   % The atomic species, positions, and rms3d values (Debye-Waller factors). See "making models" for more details on how to make this
@@ -312,7 +514,7 @@ input_multislice.spec_cryst_nc = nc;        % The number of unit cells in c (not
 
 [Up](#content)
 
-#### 6.3.5 Set slicing and when to output results
+#### 7.3.5 Set slicing and when to output results
 ```MATLAB
 input_multislice.potential_slicing = 2; %Slice the potential by slice projection
 input_multislice.thick_type = 2; % Get output by slices
@@ -321,7 +523,7 @@ input_multislice.thick = (0:input_multislice.spec_dz:input_multislice.spec_lz-in
 
 [Up](#content)
 
-#### 6.3.6 Set electron-phonon interaction
+#### 7.3.6 Set electron-phonon interaction
 ```MATLAB
 input_multislice.pn_model = 3;                       % ePM_Still_Atom = 1, ePM_Absorptive = 2, ePM_Frozen_Phonon = 3
 input_multislice.pn_coh_contrib = 0;
@@ -333,7 +535,7 @@ input_multislice.pn_seed = 300183;                   % Random seed(frozen phonon
 
 [Up](#content)
 
-#### 6.3.7 Set potential sampling.
+#### 7.3.7 Set potential sampling.
 This affects resolution/maximum scattering angle and affects the simulation time alot.
 ```MATLAB
 input_multislice.nx = 1024;     % number of pixels in x
@@ -343,7 +545,7 @@ input_multislice.bwl = 1;   % Band-width limit, 1: true, 0:false
 
 [Up](#content)
 
-#### 6.3.8 Set acceleration voltage and beam tilt
+#### 7.3.8 Set acceleration voltage and beam tilt
 ```MATLAB
 input_multislice.E_0 = 200.00;  % Acceleration Voltage (keV)
 input_multislice.theta = 0.0;   % Tilt ilumination (deg)
@@ -352,7 +554,7 @@ input_multislice.phi = 0.0;     % Tilt ilumination (deg)
 
 [Up](#content)
 
-#### 6.3.9 Set the illumination model
+#### 7.3.9 Set the illumination model
 ```MATLAB
 input_multislice.illumination_model = 1;        % 1: coherente mode, 2: Partial coherente mode, 3: transmission cross coefficient, 4: Numerical integration
 input_multislice.temporal_spatial_incoh = 1;    % 1: Temporal and Spatial, 2: Temporal, 3: Spatial
@@ -360,7 +562,7 @@ input_multislice.temporal_spatial_incoh = 1;    % 1: Temporal and Spatial, 2: Te
 
 [Up](#content)
 
-#### 6.3.10 Set condenser lens parmeters
+#### 7.3.10 Set condenser lens parmeters
 More aberrations can be defined, but C10 and C12 are the most important
 ```MATLAB
 input_multislice.cond_lens_m = 0;                   % Vortex momentum
@@ -373,7 +575,7 @@ input_multislice.cond_lens_c12 = 0.00;  %Condenser lens spherical aberration [mm
 
 [Up](#content)
 
-#### 6.3.11 Set the defocus spread function (temporal incoherence?)
+#### 7.3.11 Set the defocus spread function (temporal incoherence?)
 Only used if the illumination model is set to 4 (numerical integration) I think.
 ```MATLAB
 dsf_sigma = il_iehwgd_2_sigma(32);                  % from defocus spread to standard deviation
@@ -383,8 +585,9 @@ input_multislice.cond_lens_dsf_npoints = 5;         % # of integration points. I
 
 [Up](#content)
 
-#### 6.3.12 Set the source spread function (spatial incoherence)
+#### 7.3.12 Set the source spread function (spatial incoherence)
 Only used if the illumination model is set to 4 (numerical integration) I think.
+##### 7.3.12.1 Converged mode:
 ```MATLAB
 ssf_sigma = il_hwhm_2_sigma(0.45); % half width at half maximum to standard deviation
 input_multislice.cond_lens_ssf_sigma = ssf_sigma;  	% standard deviation: For parallel ilumination(�^-1); otherwise (�)
@@ -393,7 +596,16 @@ input_multislice.cond_lens_ssf_npoints = 4;         % # of integration points. I
 
 [Up](#content)
 
-#### 6.3.13 Specify the zero defocus reference
+##### 7.3.12.1 Parallel mode:
+```MATLAB
+ssf_sigma = il_mrad_2_sigma(input_multislice.E_0, 0.02); % mrad to standard deviation
+input_multislice.cond_lens_ssf_sigma = ssf_sigma;  	% standard deviation: For parallel ilumination(�^-1); otherwise (�)
+input_multislice.cond_lens_ssf_npoints = 4;         % # of integration points. It will be only used if illumination_model=4
+```
+
+[Up](#content)
+
+#### 7.3.13 Specify the zero defocus reference
 ```MATLAB
 input_multislice.cond_lens_zero_defocus_type = 1;   % eZDT_First = 1, eZDT_User_Define = 2
 input_multislice.cond_lens_zero_defocus_plane = 0;
@@ -401,7 +613,7 @@ input_multislice.cond_lens_zero_defocus_plane = 0;
 
 [Up](#content)
 
-#### 6.3.14Define detectors
+#### 7.3.14 Define STEM detectors
 ```MATLAB
 input_multislice.detector.type = 1;  % eDT_Circular = 1, eDT_Radial = 2, eDT_Matrix = 3
 
@@ -414,7 +626,7 @@ input_multislice.detector.cir(2).outer_ang = 203.00;    % outer collection semi-
 
 [Up](#content)
 
-#### 6.3.15 Define the scan pattern
+#### 7.3.15 Define STEM scan pattern
 ```MATLAB
 input_multislice.scanning_ns = 25; % 25 probe positions
 input_multislice.scanning_x0 = 0.00; % scan start in x [Å]
@@ -426,7 +638,7 @@ input_multislice.scanning_periodic = 0; % omit last scan row/column to enable pe
 
 [Up](#content)
 
-### 6.4 Setup functions
+### 7.4 Setup functions
 As you can see, setting up a simulation requires quite many lines of code, and are very sensitive to typos and errors. Therefore, `mul2py` also provides some help functions to set up some usual simulation types:
  - `STEM_setup("model_path", convergence_angle, detectors)`
  - `HRTEM_setup("model_path")`
@@ -437,7 +649,7 @@ As you can see, setting up a simulation requires quite many lines of code, and a
 
 [Up](#content)
 
-#### 6.4.1 STEM_setup.m
+#### 7.4.1 STEM_setup.m
 `STEM_setup.m` takes three required parameters and a number of optional parameters.
 
 Example
@@ -503,7 +715,7 @@ input_multislice = STEM_setup(model_path, alpha, collection_angles)
 
 [Up](#content)
 
-#### 6.4.2 HRTEM_setup.m
+#### 7.4.2 HRTEM_setup.m
 `HRTEM_setup.m` takes one required parameter and a number of optional parameters.
 
 Example
@@ -549,7 +761,7 @@ input_multislice = HRTEM_setup(model_path)
 
 [Up](#content)
 
-#### 6.4.3 CBED_setup.m
+#### 7.4.3 CBED_setup.m
 `CBED_setup.m` takes two required parameters and a number of optional parameters.
 
 Example
@@ -595,7 +807,7 @@ input_multislice = CBED_setup(model_path)
 
 [Up](#content)
 
-#### 6.4.4 EWRS_setup.m
+#### 7.4.4 EWRS_setup.m
 `EWRS_setup.m` takes two required parameters and a number of optional parameters.
 
 Example

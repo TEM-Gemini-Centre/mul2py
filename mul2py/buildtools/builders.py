@@ -227,7 +227,7 @@ def load_results(results_file):
 
     Reads a hdf file and builds a hyperspy signal by assumint that the HDF file has a group named 'results/images' at its root.
 
-    The .ecmat format is my (Emil Christiansen) own way of structuring output in .mat files from MULTEM (ecmat = ECmat = easymat) that makes it easier to load e.g. scanning CBED or scanning EWRS results.
+    The .ecmat format is my (Emil Christiansen) own way of structuring output in .mat files from MULTEM (ecmat = ECmat = easymat) that makes it easier to load e.g. scanning SCBED or scanning EWRS results.
 
     Parameters
     ----------
@@ -269,7 +269,7 @@ def make_signal(filepath):
     _simulation_types = {
         11: 'STEM',
         12: 'ISTEM',
-        21: 'CBED',
+        21: 'SCBED',
         22: 'CBEI',
         31: 'ED',
         32: 'HRTEM',
@@ -501,7 +501,7 @@ def build_cbed(filepath, simulation_parameter_file=None):
         elapsed_time = None
 
     # Set original metadata
-    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='CBED',
+    set_original_metadata(signal, input_parameters, filepath=filepath, simulation_type='SCBED',
                           elapsed_time=elapsed_time)
 
     # Copy the general metadata
@@ -516,7 +516,7 @@ def build_cbed(filepath, simulation_parameter_file=None):
     try:
         set_important_simulation_parameters(signal, 'cbed')
     except AttributeError as e:
-        print('Could not set important CBED simulation parameter:\n{err}'.format(err=e))
+        print('Could not set important SCBED simulation parameter:\n{err}'.format(err=e))
 
     # Set axes properties
     set_axes(signal, 0, z, name='z')

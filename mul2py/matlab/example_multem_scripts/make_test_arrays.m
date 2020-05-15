@@ -43,7 +43,7 @@ end
 
 save("ewrs_test_results.ecmat", 'results', '-v7.3');
 
-%% CBED
+%% SCBED
 clear results
 results.x=x;
 results.y=y;
