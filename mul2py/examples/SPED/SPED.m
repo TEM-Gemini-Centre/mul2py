@@ -43,8 +43,8 @@ results.input = input_multislice;
 %% Set up precession
 n_theta = 360; %Cone illumination steps in degrees
 phi = 1; %Cone half-angle in degrees
-theta_noise_std = 0.1; #Add some randomized noise to the theta angle. Standard deviation of normalized distribution in degrees
-phi_noise_std = 0.1; #Add some randomized noise to the phi angle. Standard deviation of normalized distribution in degrees
+theta_noise_std = 0.1; %Add some randomized noise to the theta angle. Standard deviation of normalized distribution in degrees
+phi_noise_std = 0.1; %Add some randomized noise to the phi angle. Standard deviation of normalized distribution in degrees
 
 %% Set up scan pattern
 centre_x = original_input.spec_lx/2;
