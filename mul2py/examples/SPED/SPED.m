@@ -99,7 +99,7 @@ for i = 1:size(results.xs, 2)
 			try %Try-catch to fail with some extra info and save the data so far if fail.
 				if k == 1
 					for t = 1:length(output_multislice.data)
-						results.images(:, :, i, j, t) = transpose(output_multislice.data(t).m2psi_tot;) %Assign results if first simulation at this position.
+						results.images(:, :, i, j, t) = transpose(output_multislice.data(t).m2psi_tot); %Assign results if first simulation at this position.
 					end
 				else
 					for t = 1:length(output_multislice.data)
