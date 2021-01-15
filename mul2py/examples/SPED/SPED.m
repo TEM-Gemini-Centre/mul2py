@@ -47,14 +47,14 @@ theta_noise_std = 0.1; %Add some randomized noise to the theta angle. Standard d
 phi_noise_std = 0.1; %Add some randomized noise to the phi angle. Standard deviation of normalized distribution in degrees
 
 %% Set up scan pattern
-centre_x = original_input.spec_lx/2;
-centre_y = original_input.spec_ly/2;
+centre_x = input_multislice.spec_lx/2;
+centre_y = input_multislice.spec_ly/2;
 
-scanning_width = original_input.spec_cryst_a;
-scanning_height = original_input.spec_cryst_b;
+scanning_width = input_multislice.spec_cryst_a;
+scanning_height = input_multislice.spec_cryst_b;
 
 scanning_ns_x = 2;
-scanning_ns_y = 3;
+scanning_ns_y = 2;
 
 x0 = centre_x - scanning_width/2;
 y0 = centre_y - scanning_height/2;
@@ -71,7 +71,7 @@ results.xs = xs;
 results.ys = ys;
 
 %% Pre-allocate image array and thickness cell
-results.images = zeros(input_multislice.nx, input_multislice.ny, size(xs, 2), size(ys, 2), size(input_multislice.thick, 2));
+results.images = complex(zeros(input_multislice.nx, input_multislice.ny, size(xs, 2), size(ys, 2), size(input_multislice.thick, 2)));
 results.thicknesses = {};
 
 %% Loop through x and y positions
@@ -85,37 +85,41 @@ for i = 1:size(results.xs, 2)
 
         %Print some scan info
         fprintf("Simulating SPED stack %i of %i: (x,y) = (%f,%f)\r", counter, length(xs) * length(ys), input_multislice.iw_x, input_multislice.iw_y);
-	
+		tic;
 		%Loop through angles
-		for k = 1:n_theta:
-			input_multislize.theta = 360 * k / n_theta + theta_noise * randn(1);
-			input_multislize.phi = phi + phi_noise * randn(1);
-		
+		for k = 1:n_theta
+			input_multislice.theta = 360 / n_theta * k + theta_noise_std * randn(1);
+			input_multislice.phi = phi + phi_noise_std * randn(1);
+			%fprintf("Simulating cone angle %f", input_multislice.theta);
 			%Run simulation
 			clear il_MULTEM;
-			tic;
+			
 			output_multislice = il_MULTEM(system_conf, input_multislice);
-			toc;
-			for t = 1:length(output_multislice.data)
-			    results.images(:, :, i, j, t) = results.images(:, :, i, j, t) + output_multislice.data(t).m2psi_tot; %Add the results
+			
+			try %Try-catch to fail with some extra info and save the data so far if fail.
+				if k == 1
+					for t = 1:length(output_multislice.data)
+						results.images(:, :, i, j, t) = transpose(output_multislice.data(t).m2psi_tot;) %Assign results if first simulation at this position.
+					end
+				else
+					for t = 1:length(output_multislice.data)
+						results.images(:, :, i, j, t) = results.images(:, :, i, j, t) + transpose(output_multislice.data(t).m2psi_tot); %Add the results if not first simulation at this position
+					end
+				end
+			catch ME
+				fprintf("Exception for i=%i, j=%i, k=%i, and t=%i. Data size: (%s)", i, j, k, t, strip(sprintf("%i,", size(output_multislice.data)), "right", ","));
+				save(sprintf("%s/%s_%i_%i_%i_%i_output.mat", output_path, simulation_name, i, j, k, t), "output_multislice", "-v7.3");
+				save(sprintf("%s/%s_%i_%i_%i_%i_results.ecmat", output_path, simulation_name, i, j, k, t), "results", "-v7.3");
+				rethrow(ME)
 			end
-	
+						
+		toc;
+		
 		end
 		
 		%Store thickness positions of output
 		results.thicknesses{i, j} = output_multislice.thick;
 		
-		%Store result
-		try %Try-catch to fail with some extra info and save the data so far.
-			for t = 1:length(output_multislice.data)
-			    results.images(:, :, i, j, t) = transpose(results.images(:, :, i, j, t)); %Must be transposed to import to Hyperspy easier
-			end
-		catch ME
-			fprintf("Exception for i=%i, j=%i, and t=%i. Data size: (%s)", i, j, t, strip(sprintf("%i,", size(output_multislice.data)), "right", ","));
-			save(sprintf("%s/%s_%i_%i_%i_output.mat", output_path, simulation_name, i, j, t), "output_multislice", "-v7.3");
-			save(sprintf("%s/%s_%i_%i_%i_results.ecmat", output_path, simulation_name, i, j, t), "results", "-v7.3");
-			rethrow(ME)
-		end
     counter = counter+1;
     end
 
