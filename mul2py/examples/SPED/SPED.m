@@ -34,7 +34,7 @@ mkdir(char(output_path));
 
 %% Load simulation parameters. `MULTEM_input.mat` should contain a struct called `input_multislice` with all relevant simulation parameters given in its fields, including the atomistic model.
 convergence_angle = 0.5; %semi-angle [mrad]
-input_multislice = CBED_setup("Al_10x10x20.mat", convergence_angle, "nx", 1024, "ny", 1024, "phonons", 20, "thick_type", 2, "instrument", "2100F", "multem_path", MULTEM_path);
+input_multislice = CBED_setup("Al_10x10x20.mat", convergence_angle, "nx", 1024, "ny", 1024, "phonons", 20, "thick_type", 1, "instrument", "2100F", "multem_path", MULTEM_path);
 
 %% Make results struct and add inputs and system configuration
 results.system = system_conf;
@@ -96,26 +96,27 @@ for i = 1:size(results.xs, 2)
 			tic;
 			output_multislice = il_MULTEM(system_conf, input_multislice);
 			toc;
-
-			%Store thickness positions of output
-			results.thicknesses{i, j} = output_multislice.thick;
-
-			%Store result
-			try %Try-catch to fail with some extra info and save the data so far.
-				for t = 1:length(output_multislice.data)
-				    results.images(:, :, i, j, t) = transpose(output_multislice.data(t).m2psi_tot); %Must be transposed to import to Hyperspy easier
-				end
-			catch ME
-				fprintf("Exception for i=%i, j=%i, and t=%i. Data size: (%s)", i, j, t, strip(sprintf("%i,", size(output_multislice.data)), "right", ","));
-				save(sprintf("%s/%s_%i_%i_%i_output.mat", output_path, simulation_name, i, j, t), "output_multislice", "-v7.3");
-				save(sprintf("%s/%s_%i_%i_%i_results.ecmat", output_path, simulation_name, i, j, t), "results", "-v7.3");
-				rethrow(ME)
+			for t = 1:length(output_multislice.data)
+			    results.images(:, :, i, j, t) = results.images(:, :, i, j, t) + output_multislice.data(t).m2psi_tot; %Add the results
 			end
-			
+	
 		end
 		
+		%Store thickness positions of output
+		results.thicknesses{i, j} = output_multislice.thick;
+		
+		%Store result
+		try %Try-catch to fail with some extra info and save the data so far.
+			for t = 1:length(output_multislice.data)
+			    results.images(:, :, i, j, t) = transpose(results.images(:, :, i, j, t)); %Must be transposed to import to Hyperspy easier
+			end
+		catch ME
+			fprintf("Exception for i=%i, j=%i, and t=%i. Data size: (%s)", i, j, t, strip(sprintf("%i,", size(output_multislice.data)), "right", ","));
+			save(sprintf("%s/%s_%i_%i_%i_output.mat", output_path, simulation_name, i, j, t), "output_multislice", "-v7.3");
+			save(sprintf("%s/%s_%i_%i_%i_results.ecmat", output_path, simulation_name, i, j, t), "results", "-v7.3");
+			rethrow(ME)
+		end
     counter = counter+1;
-
     end
 
 end
