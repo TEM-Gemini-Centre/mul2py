@@ -53,8 +53,8 @@ function [details] = print_simulation_details(input_multem, varargin)
     %% Reciprocal resolution
     dkx = 1 / input_multem.spec_lx;
     dky = 1 / input_multem.spec_ly;
-    dax = rAng_2_mrad(dkx, input_multem.E_0);
-    day = rAng_2_mrad(dky, input_multem.E_0);
+    dax = ilm_rAng_2_mrad(dkx, input_multem.E_0);
+    day = ilm_rAng_2_mrad(dky, input_multem.E_0);
     details = details +sprintf("Reciprocal resolution:\n\tx: %d mrad (%d 1/Å) \n\ty: %d mrad (%d 1/Å)\n", dax, dkx, day, dky);
     
     %% Maximum scattering angles
@@ -62,8 +62,8 @@ function [details] = print_simulation_details(input_multem, varargin)
     kx_max = input_multem.nx * dkx * bandwidth / 2; %Divide by 2 because half-angles
     ky_max = input_multem.ny * dky * bandwidth / 2;
     
-    max_scattering_angle_x = rAng_2_mrad(kx_max, input_multem.E_0);
-    max_scattering_angle_y = rAng_2_mrad(ky_max, input_multem.E_0);
+    max_scattering_angle_x = ilm_rAng_2_mrad(kx_max, input_multem.E_0);
+    max_scattering_angle_y = ilm_rAng_2_mrad(ky_max, input_multem.E_0);
     details = details + sprintf("Maximum scattering angles:\n\tx: %d mrad (%d 1/Å)\n\ty: %d mrad (%d 1/Å)\n", max_scattering_angle_x, kx_max, max_scattering_angle_y, ky_max);    
     
     
