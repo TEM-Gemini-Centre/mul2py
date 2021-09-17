@@ -85,7 +85,7 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     fprintf("Running simulation\n")
     clear ilc_MULTEM;
     tic;
-    output_multislice = input_multem.ilc_MULTEM;
+    output_multislice = input_multem.ilc_multem;
     toc;
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Construct results %%%%%%%%%%%%%%%%%%%%%%%%
