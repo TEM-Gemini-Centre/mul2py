@@ -14,7 +14,7 @@ function [results] = run_STEM_simulation(model_path, alpha, collection_angles, v
     validStrChar = @(x) ischar(x) || isstring(x);
     valid1or2 = @(x) x==1 || x==2;
     validPositiveNumber = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-
+    
     %Simulation Precision
     default_precision = 1; % eP_Float = 1, eP_double = 2
     addParameter(p, "precision", default_precision, valid1or2);

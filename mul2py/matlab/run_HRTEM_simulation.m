@@ -32,7 +32,7 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     addParameter(p, "gpu_device", default_gpu_device, validPositiveNumber);
 
     %Path to MULTEM installation
-    default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
+    default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
     addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
 
     %Save results, or only return them?
@@ -73,29 +73,31 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Simulation Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice = HRTEM_setup(model_path, varargin{:});
+    input_multem = HRTEM_setup(model_path, varargin{:});
 
     %%%%%%%%%%%%%%%%%%%%%%%%% System Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2
-    system_conf.device = p.Results.device;                              % eD_CPU = 1, eD_GPU = 2
-    system_conf.cpu_nthread = p.Results.cpu_nthread;
-    system_conf.gpu_device = p.Results.gpu_device;
+    input_multem.system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2
+    input_multem.system_conf.device = p.Results.device;                              % eD_CPU = 1, eD_GPU = 2
+    input_multem.system_conf.cpu_nthread = p.Results.cpu_nthread;
+    input_multem.system_conf.gpu_device = p.Results.gpu_device;
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Run Simulation %%%%%%%%%%%%%%%%%%%%%%%%
     fprintf("Running simulation\n")
-    clear il_MULTEM;
+    clear ilc_MULTEM;
     tic;
-    output_multislice = il_MULTEM(system_conf, input_multislice);
+    output_multislice = input_multem.ilc_MULTEM;
     toc;
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Construct results %%%%%%%%%%%%%%%%%%%%%%%%
     fprintf("Constructing results structure\n")
+    
+    clear results
     %Input Parameters
-    results.input = input_multislice;
+    results.input = input_multem.toStruct(); %Get the input parameters as a struct.
     results.system = system_conf;
 
     %Images
-    results.images = zeros(input_multislice.nx, input_multislice.ny, length(output_multislice.data));
+    results.images = zeros(input_multem.nx, input_multem.ny, length(output_multislice.data));
     if length(output_multislice.data) == 1
         results.images(:,:, 1) = transpose(output_multislice.data.m2psi_tot);
     else

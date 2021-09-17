@@ -1,18 +1,9 @@
-% Function for setting up MULTEM SCBED simulations for the JEM2100F
-% microscope at the TEM Gemini centre.
-% Based on the SCBED example written by Ivan Lobato:
-%
-% output_multislice = il_MULTEM(system_conf, input_multislice) perform TEM simulation
-% 
-% Exit wave real space (EWRS) simulation
-% 
-% All parameters of the input_multislice structure are explained in multem_default_values()
-% 
-% Copyright 2017 Ivan Lobato <Ivanlh20@gmail.com>
+% Function for setting up MULTEM SCBED simulations for the transmission
+% electron microscopes at the TEM Gemini centre.
+% Based on the HRTEM example written by Ivan Lobato
 
-function [input_multislice] = HRTEM_setup(model_path, varargin)
+function [input_multem] = HRTEM_setup(model_path, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%% Argument Parsing %%%%%%%%%%%%%%%%%%%%%%%%
-    default_mode = "converged";
     default_defocus = nan;
     default_nx = 1024;
     default_ny = 1024;
@@ -24,7 +15,7 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     default_instrument = "";
     default_print_parser = 0;
     default_print_details = 1;
-    default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
+    default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
     
     p = inputParser;
     p.KeepUnmatched = true;
@@ -34,7 +25,6 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     validStrChar = @(x) ischar(x) || isstring(x);
     
     addRequired(p, "model_path", validStrChar);
-    addParameter(p, "mode", default_mode, validStrChar);
     addParameter(p, "nx", default_nx, validScalarPosNum);
     addParameter(p, "ny", default_ny, validScalarPosNum);
     addParameter(p, "bwl", default_bwl, validScalarPosNum);
@@ -62,86 +52,87 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     addpath(char(sprintf("%s/mex_bin", p.Results.MULTEM_path)));
 
     %%%%%%%%%%%%%%%%%% Load multem default parameter %%%%%%%%$$%%%%%%%%%
-    input_multislice = multem_default_values();          % Load default values;
+    clear multem_input input_multem %Clear parameters. multem_input.parameters should still give you the parameters class defined in +multem_input
+    input_multem = multem_input.parameters;          % Load default values;
 
     %%%%%%%%%%%%%%%%%%%%%%% Specimen information %%%%%%%%%%%%%%%%%%%%%%%
     load(p.Results.model_path);
     %Update `input_multislice`
-    input_multislice.spec_atoms = spec_atoms;
-    input_multislice.spec_lx = spec_lx;
-    input_multislice.spec_ly = spec_ly;
-    input_multislice.spec_lz = spec_lz;
-    input_multislice.spec_dz = spec_dz;
-    input_multislice.spec_cryst_a = a;
-    input_multislice.spec_cryst_b = b;
-    input_multislice.spec_cryst_c = c;
+    input_multem.spec_atoms = spec_atoms;
+    input_multem.spec_lx = spec_lx;
+    input_multem.spec_ly = spec_ly;
+    input_multem.spec_lz = spec_lz;
+    input_multem.spec_dz = spec_dz;
+    input_multem.spec_cryst_a = a;
+    input_multem.spec_cryst_b = b;
+    input_multem.spec_cryst_c = c;
     try
-        input_multislice.spec_cryst_na = na;
-        input_multislice.spec_cryst_nb = nb;
-        input_multislice.spec_cryst_nc = nc;
+        input_multem.spec_cryst_na = na;
+        input_multem.spec_cryst_nb = nb;
+        input_multem.spec_cryst_nc = nc;
     catch ME
         fprintf("Error when setting specimen crystal parameters 'na', 'nb', and 'nc':\n\t%s\nSetting values based on specimen unit cell and simulation cell size. \nNB! only makes sense for cubic crystals with a, b, and c oriented along x, y, and z, respectively.\n", ME.message)
-        input_multislice.spec_cryst_na = input_multislice.spec_lx / input_multislice.spec_cryst_a;
-        input_multislice.spec_cryst_nb = input_multislice.spec_ly / input_multislice.spec_cryst_b;
-        input_multislice.spec_cryst_nc = input_multislice.spec_lz / input_multislice.spec_cryst_c;
+        input_multem.spec_cryst_na = input_multem.spec_lx / input_multem.spec_cryst_a;
+        input_multem.spec_cryst_nb = input_multem.spec_ly / input_multem.spec_cryst_b;
+        input_multem.spec_cryst_nc = input_multem.spec_lz / input_multem.spec_cryst_c;
     end
 
     %%%%%%%%%%%%%%%%%%%%%% Specimen thickness %%%%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice.thick_type = p.Results.thick_type;                     % eTT_Whole_Spec = 1, eTT_Through_Thick = 2, eTT_Through_Slices = 3
+    input_multem.thick_type = p.Results.thick_type;                     % eTT_Whole_Spec = 1, eTT_Through_Thick = 2, eTT_Through_Slices = 3
     if p.Results.thick_type == 2
         if length(p.Results.thicknesses) == 1
             if p.Results.thicknesses == 0 %Use the slice thicknesses
-                input_multislice.thick = (0:input_multislice.spec_dz:input_multislice.spec_lz-input_multislice.spec_dz);
+                input_multem.thick = (input_multem.spec_dz:input_multem.spec_dz:input_multem.spec_lz);%-input_multem.spec_dz);
             else %use the provided thickness
-                input_multislice.thick = p.Results.thicknesses;
+                input_multem.thick = p.Results.thicknesses;
             end
         else %use the provided thicknesses
-            input_multislice = p.Results.thicknesses;
+            input_multem = p.Results.thicknesses;
         end
     end
 
     %%%%%%%%%%%%%%%%%%%% Set simulation experiment %%%%%%%%%%%%%%%%%%%%%
     % eTEMST_STEM=11, eTEMST_ISTEM=12, eTEMST_CBED=21, eTEMST_CBEI=22, eTEMST_ED=31, eTEMST_HRTEM=32, eTEMST_PED=41, eTEMST_HCTEM=42, eTEMST_EWFS=51, eTEMST_EWRS=52, 
     % eTEMST_EELS=61, eTEMST_EFTEM=62, eTEMST_ProbeFS=71, eTEMST_ProbeRS=72, eTEMST_PPFS=81, eTEMST_PPRS=82,eTEMST_TFFS=91, eTEMST_TFRS=92
-    input_multislice.simulation_type = 32;
+    input_multem.simulation_type = 32;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%% Incident wave %%%%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice.iw_type = 1;   % 1: Plane_Wave, 2: Convergent_wave, 3:User_Define, 4: auto
+    input_multem.iw_type = 1;   % 1: Plane_Wave, 2: Convergent_wave, 3:User_Define, 4: auto. Should be 4 for HRTEM?
 
     %%%%%%%%%%%%%% Electron-Specimen interaction model %%%%%%%%%%%%%%%%%
-    input_multislice.interaction_model = 1;              % eESIM_Multislice = 1, eESIM_Phase_Object = 2, eESIM_Weak_Phase_Object = 3
-    input_multislice.potential_type = 6;                 % ePT_Doyle_0_4 = 1, ePT_Peng_0_4 = 2, ePT_Peng_0_12 = 3, ePT_Kirkland_0_12 = 4, ePT_Weickenmeier_0_12 = 5, ePT_Lobato_0_12 = 6
+    input_multem.interaction_model = 1;              % eESIM_Multislice = 1, eESIM_Phase_Object = 2, eESIM_Weak_Phase_Object = 3
+    input_multem.potential_type = 6;                 % ePT_Doyle_0_4 = 1, ePT_Peng_0_4 = 2, ePT_Peng_0_12 = 3, ePT_Kirkland_0_12 = 4, ePT_Weickenmeier_0_12 = 5, ePT_Lobato_0_12 = 6
 
     %%%%%%%%%%%%%%%%%%%%%%% Potential slicing %%%%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice.potential_slicing = 2;              % ePS_Planes = 1, ePS_dz_Proj = 2, ePS_dz_Sub = 3, ePS_Auto = 4
+    input_multem.potential_slicing = 2;              % ePS_Planes = 1, ePS_dz_Proj = 2, ePS_dz_Sub = 3, ePS_Auto = 4
 
     %%%%%%%%%%%%%%% Electron-Phonon interaction model %%%%%%%%%%%%%%%%%%
-    input_multislice.pn_model = 3;                       % ePM_Still_Atom = 1, ePM_Absorptive = 2, ePM_Frozen_Phonon = 3
-    input_multislice.pn_coh_contrib = 0;
-    input_multislice.pn_single_conf = 0;                 % 1: true, 0:false (extract single configuration)
-    input_multislice.pn_nconf = p.Results.phonons;                      % true: specific phonon configuration, false: number of frozen phonon configurations
-    input_multislice.pn_dim = 110;                       % phonon dimensions (xyz)
-    input_multislice.pn_seed = 300183;                   % Random seed(frozen phonon)
+    input_multem.pn_model = 3;                       % ePM_Still_Atom = 1, ePM_Absorptive = 2, ePM_Frozen_Phonon = 3
+    input_multem.pn_coh_contrib = 0;
+    input_multem.pn_single_conf = 0;                 % 1: true, 0:false (extract single configuration)
+    input_multem.pn_nconf = p.Results.phonons;                      % true: specific phonon configuration, false: number of frozen phonon configurations
+    input_multem.pn_dim = 110;                       % phonon dimensions (xyz)
+    input_multem.pn_seed = 300183;                   % Random seed(frozen phonon)
 
     %%%%%%%%%%%%%%%%%%%%%% x-y sampling %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice.nx = p.Results.nx;
-    input_multislice.ny = p.Results.ny;
-    input_multislice.bwl = p.Results.bwl;                            % Band-width limit, 1: true, 0:false
+    input_multem.nx = p.Results.nx;
+    input_multem.ny = p.Results.ny;
+    input_multem.bwl = p.Results.bwl;                            % Band-width limit, 1: true, 0:false
 
     %%%%%%%%%%%%%%%%%%%% Microscope parameters %%%%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice.E_0 = p.Results.E0;                          % Acceleration Voltage (keV)
-    input_multislice.theta = 0.0;                        % Till ilumination (�)
-    input_multislice.phi = 0.0;                          % Till ilumination (�)
+    input_multem.E_0 = p.Results.E0;                          % Acceleration Voltage (keV)
+    input_multem.theta = 0.0;                        % Till ilumination (�)
+    input_multem.phi = 0.0;                          % Till ilumination (�)
 
     %%%%%%%%%%%%%%%%%%%%%% Illumination model %%%%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice.illumination_model = 2;             % 1: coherente mode, 2: Partial coherente mode, 3: transmission cross coefficient, 4: Numerical integration
-    input_multislice.temporal_spatial_incoh = 1;         % 1: Temporal and Spatial, 2: Temporal, 3: Spatial
+    input_multem.illumination_model = 2;             % 1: coherente mode, 2: Partial coherente mode, 3: transmission cross coefficient, 4: Numerical integration
+    input_multem.temporal_spatial_incoh = 1;         % 1: Temporal and Spatial, 2: Temporal, 3: Spatial
 
     %%%%%%%%%%%%%%%%%%%%%%%% Objective lens %%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice.obj_lens_m = 0;                   % Vortex momentum
+    input_multem.obj_lens_m = 0;                   % Vortex momentum
     
-    input_multislice.obj_lens_inner_aper_ang = 0.0;    % Inner aperture (mrad) 
-    input_multislice.obj_lens_outer_aper_ang = 0.0;    % Outer aperture (mrad)
+    input_multem.obj_lens_inner_aper_ang = 0.0;    % Inner aperture (mrad) 
+    input_multem.obj_lens_outer_aper_ang = 0.0;    % Outer aperture (mrad)
     
     % Set aberrations
     if strcmp(p.Results.instrument, "")
@@ -156,64 +147,30 @@ function [input_multislice] = HRTEM_setup(model_path, varargin)
     end
     
     if isstruct(aberrations)
-        input_multislice.obj_lens_c_10 = p.Results.defocus;                                  % [C1]      Defocus (�)
-    
-        input_multislice.obj_lens_c_12 = aberrations.obj_lens_c_12;                         % [A1]      2-fold astigmatism (�)
-        input_multislice.obj_lens_c_phi_12 = aberrations.obj_lens_phi_12;                   % [phi_A1]	Azimuthal angle of 2-fold astigmatism (deg)
-
-        input_multislice.obj_lens_c_21 = aberrations.obj_lens_c_21;                         % [B2]      Axial coma (�)
-        input_multislice.obj_lens_c_phi_21 = aberrations.obj_lens_phi_21;                   % [phi_B2]	Azimuthal angle of axial coma (deg)
-
-        input_multislice.obj_lens_c_23 = aberrations.obj_lens_c_23;                         % [A2]      3-fold astigmatism (�)
-        input_multislice.obj_lens_c_phi_23 = aberrations.obj_lens_phi_23;                   % [phi_A2]	Azimuthal angle of 3-fold astigmatism (deg)
-
-        input_multislice.obj_lens_c_30 = aberrations.obj_lens_c_30;                         % [C3] 		3rd order spherical aberration (mm)
-
-        input_multislice.obj_lens_c_32 = aberrations.obj_lens_c_32;                         % [S3]      Axial star aberration (�)
-        input_multislice.obj_lens_c_phi_32 = aberrations.obj_lens_phi_32;                   % [phi_S3]	Azimuthal angle of axial star aberration (deg)
-
-        input_multislice.obj_lens_c_34 = aberrations.obj_lens_c_34;                         % [A3]      4-fold astigmatism (�)
-        input_multislice.obj_lens_c_phi_34 = aberrations.obj_lens_phi_34;                   % [phi_A3]	Azimuthal angle of 4-fold astigmatism (deg)
-
-        input_multislice.obj_lens_c_41 = aberrations.obj_lens_c_41;                         % [B4]      4th order axial coma (�)
-        input_multislice.obj_lens_c_phi_41 = aberrations.obj_lens_phi_41;                   % [phi_B4]	Azimuthal angle of 4th order axial coma (deg)
-
-        input_multislice.obj_lens_c_43 = aberrations.obj_lens_c_43;                         % [D4]      3-lobe aberration (�)
-        input_multislice.obj_lens_c_phi_43 = aberrations.obj_lens_phi_43;                   % [phi_D4]	Azimuthal angle of 3-lobe aberration (deg)
-
-        input_multislice.obj_lens_c_45 = aberrations.obj_lens_c_45;                         % [A4]      5-fold astigmatism (�)
-        input_multislice.obj_lens_c_phi_45 = aberrations.obj_lens_phi_45;                   % [phi_A4]	Azimuthal angle of 5-fold astigmatism (deg)
-
-        input_multislice.obj_lens_c_50 = aberrations.obj_lens_c_50;                         % [C5]      5th order spherical aberration (mm)
-        input_multislice.obj_lens_c_52 = aberrations.obj_lens_c_52;                         % [S5]      5th order axial star aberration (?)
-        input_multislice.obj_lens_c_phi_52 = aberrations.obj_lens_phi_52;                   % [phi_S5]	Azimuthal angle of 5th order axial star aberration (?)
-        input_multislice.obj_lens_c_54 = aberrations.obj_lens_c_54;                         % [R5]      5th order rosette aberration (?)
-        input_multislice.obj_lens_c_phi_54 = aberrations.obj_lens_phi_54;                   % [phi_R5]	Azimuthal angle of 5th order rosette aberration (?)
-        input_multislice.obj_lens_c_56 = aberrations.obj_lens_c_56;                         % [A5]      6-fold astigmatism (?)
-        input_multislice.obj_lens_c_phi_56 = aberrations.obj_lens_phi_56;                   % [phi_A5]	Azimuthal angle of 6-fold astigmatism (?)
+        input_multem = set_aberrations(input_multem, aberrations);
     end
     
     if isnan(p.Results.defocus)
-    	defocus = scherzer_defocus(input_multislice.E_0, input_multislice.obj_lens_c_30);%il_scherzer_defocus(input_multislice.E_0, input_multislice.obj_lens_c_30);
+    	defocus = scherzer_defocus(input_multem.E_0, input_multem.obj_lens_c_30);%il_scherzer_defocus(input_multem.E_0, input_multem.obj_lens_c_30);
     else
         defocus = p.Results.defocus;
     end
-    input_multislice.obj_lens_c_10 = defocus;
+    input_multem.obj_lens_c_10 = defocus;
 
     %%%%%%%%% defocus spread function %%%%%%%%%%%%
-    %dsf_sigma = il_iehwgd_2_sigma(32); % from defocus spread to standard deviation
-    %input_multislice.obj_lens_dsf_sigma = dsf_sigma;   % standard deviation (�)
-    %input_multislice.obj_lens_dsf_npoints = 5;         % # of integration points. It will be only used if illumination_model=4
+    dsf_sigma = ilc_iehwgd_2_sigma(32); % from defocus spread to standard deviation
+    input_multem.obj_lens_ti_sigma = dsf_sigma;   % standard deviation (�)
+    input_multem.obj_lens_ti_npts = 5;         % # of integration points. It will be only used if illumination_model=4
 
     %%%%%%%%% zero defocus reference %%%%%%%%%%%%
-    input_multislice.obj_lens_zero_defocus_type = 1;   % eZDT_First = 1, eZDT_User_Define = 2
-    input_multislice.obj_lens_zero_defocus_plane = 0;
+    input_multem.obj_lens_zero_defocus_type = 1;   % eZDT_First = 1, eZDT_User_Define = 2
+    input_multem.obj_lens_zero_defocus_plane = 0;
 
     %%%%%%%%%% source spread function %%%%%%%%%%%%
-    ssf_sigma = il_mrad_2_sigma(input_multislice.E_0, 0.02); % mrad to standard deviation% half width at half maximum to standard deviation
-    input_multislice.cond_lens_ssf_sigma = ssf_sigma;  	% standard deviation: For parallel ilumination(�^-1); otherwise (�)
-    input_multislice.cond_lens_ssf_npoints = 4;         % # of integration points. It will be only used if illumination_model=4
-
+    ssf_sigma = ilc_mrad_2_sigma(input_multem.E_0, 0.02); % mrad to standard deviation% half width at half maximum to standard deviation
+    input_multem.cond_lens_si_sigma = ssf_sigma;  	% standard deviation: For parallel ilumination(�^-1); otherwise (�)
+    input_multem.cond_lens_si_rad_npts = 4;         % # of integration points. It will be only used if illumination_model=4
+    
     if p.Results.print_details
-        fprintf("**** Set up MULTEM HRTEM simulation for instrument '%s' ****\n\n%s\n", p.Results.instrument, print_simulation_details(input_multislice, "MULTEM_path", p.Results.MULTEM_path))
+        fprintf("**** Set up MULTEM HRTEM simulation for instrument '%s' ****\n\n%s\n", p.Results.instrument, print_simulation_details(input_multem, "MULTEM_path", p.Results.MULTEM_path))
     end
