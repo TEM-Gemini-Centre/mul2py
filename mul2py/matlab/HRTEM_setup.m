@@ -15,7 +15,7 @@ function [input_multem] = HRTEM_setup(model_path, varargin)
     default_instrument = "";
     default_print_parser = 0;
     default_print_details = 1;
-    default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
+    default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/repositories/multem';
     
     p = inputParser;
     p.KeepUnmatched = true;

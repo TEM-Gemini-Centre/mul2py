@@ -32,7 +32,7 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     addParameter(p, "gpu_device", default_gpu_device, validPositiveNumber);
 
     %Path to MULTEM installation
-    default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
+    default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/repositories/multem';
     addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
 
     %Save results, or only return them?
