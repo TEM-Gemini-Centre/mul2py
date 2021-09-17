@@ -94,7 +94,6 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     clear results
     %Input Parameters
     results.input = input_multem.toStruct(); %Get the input parameters as a struct.
-    results.system = system_conf;
 
     %Images
     results.images = zeros(input_multem.nx, input_multem.ny, length(output_multislice.data));
