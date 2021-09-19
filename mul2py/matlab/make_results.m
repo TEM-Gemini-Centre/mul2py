@@ -34,7 +34,7 @@ parse(p, multem_input, multem_output, varargin{:});
     
     
 results = struct();
-if isequal(class(multem_input, 'multem_input.parameters'))
+if isequal(class(multem_input), 'multem_input.parameters')
     results.input = multem_input.toStruct();
 else
     results.input = multem_input;
