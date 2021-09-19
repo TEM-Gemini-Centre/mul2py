@@ -71,18 +71,26 @@ function write_metadata(group_id, metadata, plist, filename)
                         %h5writeatt(filename, group_name, name, value)
                     else
                         %Create dataset
-                        type_id = H5T.copy('H5T_NATIVE_DOUBLE');
-                        h5_dims = size(value);fliplr(size(value));
-                        h5_maxdims = h5_dims;%ones(size(h5_dims)) * H5ML.get_constant_value('H5S_UNLIMITED');
-                        n = size(h5_dims);
-                        n = n(2);
-                        space_id = H5S.create_simple(n, h5_dims, h5_maxdims);
-                        dcpl = 'H5P_DEFAULT';
-                        dset_id = H5D.create(group_id, name, type_id, space_id, dcpl);
-                        H5D.write(dset_id, 'H5ML_DEFAULT', 'H5S_ALL', 'H5S_ALL', plist, transpose(value));
-                        H5D.close(dset_id);
-                        H5S.close(space_id);
-                        H5T.close(type_id);
+                        group_name = H5I.get_name(group_id);
+                        if min(size(value)) < 8
+                            chunks = ones(1, length(size(value)));
+                        else
+                            chunks = ones(1, length(size(value)))*8;
+                        end                        
+                        h5create(filename, sprintf('%s/%s', group_name, name), size(value), 'Datatype', 'double', 'ChunkSize', chunks, 'Deflate', 4, 'Shuffle', 1);
+                        h5write(filename, sprintf('%s/%s', group_name, name), value);
+%                         type_id = H5T.copy('H5T_NATIVE_DOUBLE');
+%                         h5_dims = size(value);fliplr(size(value));
+%                         h5_maxdims = h5_dims;%ones(size(h5_dims)) * H5ML.get_constant_value('H5S_UNLIMITED');
+%                         n = size(h5_dims);
+%                         n = n(2);
+%                         space_id = H5S.create_simple(n, h5_dims, h5_maxdims);
+%                         dcpl = 'H5P_DEFAULT';
+%                         dset_id = H5D.create(group_id, name, type_id, space_id, dcpl);
+%                         H5D.write(dset_id, 'H5ML_DEFAULT', 'H5S_ALL', 'H5S_ALL', plist, transpose(value));
+%                         H5D.close(dset_id);
+%                         H5S.close(space_id);
+%                         H5T.close(type_id);
                     end
                     H5P.close(acpl_id);
                 end
@@ -123,16 +131,20 @@ for idx=1:dimensions
 end
 
 %Create the dataset
-type_id = H5T.copy('H5T_NATIVE_DOUBLE');
-h5_dims = fliplr(size(results_struct.images));
-h5_maxdims = h5_dims;%ones(size(h5_dims)) *H5ML.get_constant_value('H5S_UNLIMITED');%* inf;
-space_id = H5S.create_simple(dimensions, h5_dims, h5_maxdims);
-dcpl = 'H5P_DEFAULT';
-dset_id = H5D.create(results_gid, 'data', type_id, space_id, dcpl);
-H5D.write(dset_id, 'H5ML_DEFAULT', 'H5S_ALL', 'H5S_ALL', plist, results_struct.images);
-H5S.close(space_id);
-H5T.close(type_id);
-H5D.close(dset_id);
+%type_id = H5T.copy('H5T_NATIVE_DOUBLE');
+%h5_dims = fliplr(size(results_struct.images));
+%h5_maxdims = h5_dims;%ones(size(h5_dims)) *H5ML.get_constant_value('H5S_UNLIMITED');%* inf;
+%space_id = H5S.create_simple(dimensions, h5_dims, h5_maxdims);
+%dcpl = 'H5P_DATASET_CREATE';
+%H5P.set_deflate(dcpl, 9);
+%dset_id = H5D.create(results_gid, 'data', type_id, space_id, dcpl);
+%H5D.write(dset_id, 'H5ML_DEFAULT', 'H5S_ALL', 'H5S_ALL', plist, results_struct.images);
+%H5S.close(space_id);
+%H5T.close(type_id);
+%H5D.close(dset_id);
+chunks = [32 32 ones(1, length(size(results_struct.images))-2)*8];
+h5create(filename, sprintf('/Experiments/%s/data', results_struct.title), size(results_struct.images), 'Datatype', 'double', 'ChunkSize', chunks, 'Deflate', 4, 'Shuffle', 1);
+h5write(filename, sprintf('/Experiments/%s/data', results_struct.title), results_struct.images);
 
 %Create metadata groups and attributes
 metadata_gid = H5G.create(results_gid, 'metadata', plist, plist, plist);
