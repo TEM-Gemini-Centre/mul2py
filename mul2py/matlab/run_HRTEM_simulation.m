@@ -88,35 +88,13 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     output_multislice = input_multem.ilc_multem;
     toc;
 
-    %%%%%%%%%%%%%%%%%%%%%%%%% Construct results %%%%%%%%%%%%%%%%%%%%%%%%
-    fprintf("Constructing results structure\n")
-    
-    clear results
-    %Input Parameters
-    results.input = input_multem.toStruct(); %Get the input parameters as a struct.
-
-    %Images
-    results.images = zeros(input_multem.nx, input_multem.ny, length(output_multislice.data));
-    if length(output_multislice.data) == 1
-        results.images(:,:, 1) = transpose(output_multislice.data.m2psi_tot);
-    else
-        for t = 1:length(output_multislice.data)
-            results.images(:, :, t) = transpose(output_multislice.data(t).m2psi_tot);
-        end
-    end
-
-    %Some additional details
-    results.thick = output_multislice.thick;
-    results.dx = output_multislice.dx;
-    results.dy = output_multislice.dy;
-
     end_time = datetime('now','TimeZone','local');
     fprintf("HRTEM Simulation function finished at %s\n", end_time);
-    results.elapsed_time = seconds(end_time - start_time);
-
-    %% Save the data
-    if p.Results.save
-        save(sprintf("%s/%s_results.ecmat", p.Results.output_path, p.Results.simulation_name), "results", "-v7.3");
-    end
-
+    elapsed_time = seconds(end_time - start_time);
+    
+    %%% Create results structure %%%
+    results = make_results(input_multem, output_multislice, 'elapsed_time', elapsed_time, 'title', p.Results.simulation_name);
+    
+    %%% Save HDF5 file %%%
+    multem2hdf5(sprintf('%s/%s_results.hdf5', p.Results.output_path, p.Results.simulation_name), results);
 end
