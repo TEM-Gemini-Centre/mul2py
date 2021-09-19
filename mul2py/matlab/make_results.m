@@ -25,12 +25,11 @@ validMultemInput = @(x) isequal(class(x), 'multem_input.parameters');
 
 addRequired(p, "multem_input", validMultemInput);
 addRequired(p, "multem_output", isstruct);
-addParameter(p, "empty", islogical);
 addParameter(p, "xs", default_xs, validVector);
 addParameter(p, "ys", default_ys, validVector);
 addParameter(p, "title", default_title, validStrChar);
 addParameter(p, "elapsed_time", default_elapsed_time, validScalarPosNum);
-parse(p, multem_input, varargin{:});
+parse(p, multem_input, multem_output, varargin{:});
     
     
 results = struct();
