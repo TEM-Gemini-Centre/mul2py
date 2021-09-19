@@ -92,6 +92,11 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     fprintf("HRTEM Simulation function finished at %s\n", end_time);
     elapsed_time = seconds(end_time - start_time);
     
+    %Output raw data
+    parameters = input_multem.toStruct();
+    save(sprintf("%s/%s_input.mat", p.Results.output_path, p.Results.simulation_name), "parameters", "-v7.3");
+    save(sprintf("%s/%s_output.mat", p.Results.output_path, p.Results.simulation_name), "output_multislice", "-v7.3");
+    
     %%% Create results structure %%%
     results = make_results(input_multem, output_multislice, 'elapsed_time', elapsed_time, 'title', p.Results.simulation_name);
     

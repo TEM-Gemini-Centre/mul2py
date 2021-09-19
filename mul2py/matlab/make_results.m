@@ -21,7 +21,7 @@ validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
 validStrChar = @(x) ischar(x) || isstring(x);
 validVector = @(x) isrow(x) || iscol(x);
 validMultemInput = @(x) isequal(class(x), 'multem_input.parameters');
-validMultemOutput = @(x) isstruct(x) && ismember('data', fieldnames(x)) && ismember('dx', fieldnames(x)) && ismember('dy', fieldnames(x)) && (ismember('image_tot', x.data) || ismember('m2psi_tot', x.data));
+validMultemOutput = @(x) isstruct(x); %&& ismember('data', fieldnames(x)) && ismember('dx', fieldnames(x)) && ismember('dy', fieldnames(x)) && (ismember('image_tot', x.data) || ismember('m2psi_tot', x.data));
 
 
 addRequired(p, "multem_input", validMultemInput);
