@@ -21,10 +21,11 @@ validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
 validStrChar = @(x) ischar(x) || isstring(x);
 validVector = @(x) isrow(x) || iscol(x);
 validMultemInput = @(x) isequal(class(x), 'multem_input.parameters');
+validMultemOutput = @(x) isstruct(x) && ismember('data', fieldnames(x)) && ismember('dx', fieldnames(x)) && ismember('dy', fieldnames(x)) && (ismember('image_tot', x.data) || ismember('m2psi_tot', x.data));
 
 
 addRequired(p, "multem_input", validMultemInput);
-addRequired(p, "multem_output", isstruct);
+addRequired(p, "multem_output", validMultemOutput);
 addParameter(p, "xs", default_xs, validVector);
 addParameter(p, "ys", default_ys, validVector);
 addParameter(p, "title", default_title, validStrChar);
