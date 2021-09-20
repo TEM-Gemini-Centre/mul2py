@@ -49,19 +49,19 @@ results.elapsed_time = p.Results.elapsed_time;
 if isequal(multem_input.simulation_type, 11) || isequal(multem_input.simulation_type, 12)
     %STEM
     %Find number of detectors
-    if input_multem.detector.type == 1
+    if multem_input.detector.type == 1
         detectors = length(multem_input.detector.cir);
-    elseif input_multem.detector.type == 2
+    elseif multem_input.detector.type == 2
         detectors = length(multem_input.detector.radial);
-    elseif input_multem.detector.type == 3
+    elseif multem_input.detector.type == 3
         detectors = length(multem_input.detector.matrix);
     else
         detectors = length(multem_output.data(1).image_tot);
     end
     
-    results.dx = (input_multem.scanning.xe-input_multem.scanning.x0) / input_multem.scanning_ns;
-    results.dy = (input_multem.scanning.ye-input_multem.scanning.y0) / input_multem.scanning_ns;
-    results.images = zeros(input_multem.scanning_ns, input_multem.scanning_ns, length(multem_output.data), detectors);
+    results.dx = (multem_input.scanning_xe-multem_input.scanning_x0) / double(multem_input.scanning_ns);
+    results.dy = (multem_input.scanning_ye-multem_input.scanning_y0) / double(multem_input.scanning_ns);
+    results.images = zeros(multem_input.scanning_ns, multem_input.scanning_ns, length(multem_output.data), detectors);
     if length(multem_output.data) == 1
         for det=1:detectors
             results.images(:,:, 1, det) = transpose(multem_output.data.image_tot(det).image);

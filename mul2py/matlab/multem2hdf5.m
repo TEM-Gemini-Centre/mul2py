@@ -142,7 +142,11 @@ end
 %H5S.close(space_id);
 %H5T.close(type_id);
 %H5D.close(dset_id);
-chunks = [32 32 ones(1, length(size(results_struct.images))-2)*8];
+if results_struct.input.simulation_type == 11 || results_struct.input.simulation_type == 12
+    chunks = size(results_struct.images);
+else
+    chunks = [32 32 ones(1, length(size(results_struct.images))-2)];
+end
 h5create(filename, sprintf('/Experiments/%s/data', results_struct.title), size(results_struct.images), 'Datatype', 'double', 'ChunkSize', chunks, 'Deflate', 4, 'Shuffle', 1);
 h5write(filename, sprintf('/Experiments/%s/data', results_struct.title), results_struct.images);
 
