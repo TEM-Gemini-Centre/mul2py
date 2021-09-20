@@ -18,7 +18,7 @@ function write_metadata(group_id, metadata, plist, filename)
                     fprintf('parameter %s is of type %s\n', name, class(value));
                     acpl_id = H5P.create('H5P_ATTRIBUTE_CREATE');
                     %info = H5G.get_info(group_id);
-                    if isstr(value)
+                    if isstr(value) || isstring(value)
                         type_id = H5T.copy('H5T_C_S1');
                         H5T.set_size(type_id, size(value, 2));
                         encoding = H5ML.get_constant_value('H5T_CSET_ASCII');
