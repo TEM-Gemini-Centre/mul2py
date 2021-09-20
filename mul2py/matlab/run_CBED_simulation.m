@@ -1,4 +1,4 @@
-function [results] = run_CBED_simulation(model_path, varargin)
+function [results] = run_CBED_simulation(model_path, alpha, varargin)
     %% Timestamp
     start_time = datetime('now','TimeZone','local');
     fprintf("Starting CBED simulation function at %s\n", start_time);
@@ -14,7 +14,7 @@ function [results] = run_CBED_simulation(model_path, varargin)
     validStrChar = @(x) ischar(x) || isstring(x);
     valid1or2 = @(x) x==1 || x==2;
     validPositiveNumber = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-
+    
     %Simulation Precision
     default_precision = 1; % eP_Float = 1, eP_double = 2
     addParameter(p, "precision", default_precision, valid1or2);
@@ -32,7 +32,7 @@ function [results] = run_CBED_simulation(model_path, varargin)
     addParameter(p, "gpu_device", default_gpu_device, validPositiveNumber);
 
     %Path to MULTEM installation
-    default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
+    default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/repositories/multem';
     addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
 
     %Save results, or only return them?
@@ -73,7 +73,7 @@ function [results] = run_CBED_simulation(model_path, varargin)
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Simulation Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    input_multem = CBED_setup(model_path, varargin{:});
+    input_multem = CBED_setup(model_path, alpha, varargin{:});
 
     %%%%%%%%%%%%%%%%%%%%%%%%% System Setup %%%%%%%%%%%%%%%%%%%%%%%%
     input_multem.system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2

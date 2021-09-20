@@ -24,7 +24,7 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     default_instrument = "";
     default_print_parser = 0;
     default_print_details = 1;
-    default_MULTEM_path = "/cluster/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM";
+    default_MULTEM_path = "/cluster/projects/itea_lille-nv-fys-tem/repositories/multem";
     
     p = inputParser;
     p.KeepUnmatched = true;
@@ -140,7 +140,7 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     input_multem.iw_type = 4;                        % 1: Plane_Wave, 2: Convergent_wave, 3:User_Define, 4: auto
     input_multem.iw_psi = read_psi_0_multem(input_multem.nx, input_multem.ny);    % user define incident wave
     
-    %%%%%%%%%%%%%%%%%%%%%% Adjust beam x-y ? %%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%% Adjust beam x-y  %%%%%%%%%%%%%%%%%%%%%%%%%%%
     if isnan(p.Results.x)
     	x = input_multem.spec_lx / 2;
     else
