@@ -155,7 +155,7 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     input_multem.iw_x = x;  % x position 
     input_multem.iw_y = y;  % y position
     incident_wave = input_multem.ilc_incident_wave; %Calculate the incident wave
-    input_multem.iw_psi = incident_wave.psi0; %Store the incident wave
+    input_multem.iw_psi = incident_wave.psi_0; %Store the incident wave
 
     %%%%%%%%%%%%%%%%%%%%%%%% condenser lens %%%%%%%%%%%%%%%%%%%%%%%%
     input_multem.cond_lens_m = 0;                   % Vortex momentum
