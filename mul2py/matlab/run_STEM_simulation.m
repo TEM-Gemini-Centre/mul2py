@@ -76,10 +76,10 @@ function [results] = run_STEM_simulation(model_path, alpha, collection_angles, v
     input_multem = STEM_setup(model_path, alpha, collection_angles, varargin{:});
 
     %%%%%%%%%%%%%%%%%%%%%%%%% System Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2
-    system_conf.device = p.Results.device;                              % eD_CPU = 1, eD_GPU = 2
-    system_conf.cpu_nthread = p.Results.cpu_nthread;
-    system_conf.gpu_device = p.Results.gpu_device;
+    input_multem.system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2
+    input_multem.system_conf.device = p.Results.device;                              % eD_CPU = 1, eD_GPU = 2
+    input_multem.system_conf.cpu_nthread = p.Results.cpu_nthread;
+    input_multem.system_conf.gpu_device = p.Results.gpu_device;
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Run Simulation %%%%%%%%%%%%%%%%%%%%%%%%
     fprintf("Running simulation\n")

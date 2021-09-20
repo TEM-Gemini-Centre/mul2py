@@ -1,4 +1,4 @@
-function [results] = run_HRTEM_simulation(model_path, varargin)
+function [results] = run_CBED_simulation(model_path, varargin)
     %% Timestamp
     start_time = datetime('now','TimeZone','local');
     fprintf("Starting CBED simulation function at %s\n", start_time);
@@ -73,47 +73,32 @@ function [results] = run_HRTEM_simulation(model_path, varargin)
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Simulation Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    input_multislice = CBED_setup(model_path, varargin{:});
+    input_multem = CBED_setup(model_path, varargin{:});
 
     %%%%%%%%%%%%%%%%%%%%%%%%% System Setup %%%%%%%%%%%%%%%%%%%%%%%%
-    system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2
-    system_conf.device = p.Results.device;                              % eD_CPU = 1, eD_GPU = 2
-    system_conf.cpu_nthread = p.Results.cpu_nthread;
-    system_conf.gpu_device = p.Results.gpu_device;
+    input_multem.system_conf.precision = p.Results.precision;                           % eP_Float = 1, eP_double = 2
+    input_multem.system_conf.device = p.Results.device;                              % eD_CPU = 1, eD_GPU = 2
+    input_multem.system_conf.cpu_nthread = p.Results.cpu_nthread;
+    input_multem.system_conf.gpu_device = p.Results.gpu_device;
 
     %%%%%%%%%%%%%%%%%%%%%%%%% Run Simulation %%%%%%%%%%%%%%%%%%%%%%%%
-    fprintf("Simulating CBED stack at (x,y) = (%f,%f)\r", input_multislice.iw_x, input_multislice.iw_y);
+    fprintf("Simulating CBED stack at (x,y) = (%f,%f)\r", input_multem.iw_x, input_multem.iw_y);
     clear il_MULTEM;
     tic;
-    output_multislice = il_MULTEM(system_conf, input_multislice);
+    output_multislice = input_multem.ilc_multem;
     toc;
-
-    %%%%%%%%%%%%%%%%%%%%%%%%% Construct results %%%%%%%%%%%%%%%%%%%%%%%%
-    fprintf("Constructing results structure\n")
-    %Input Parameters
-    results.input = input_multislice;
-    results.system = system_conf;
-    results.system = system_conf;
-    results.xs = input_multislice.iw_x;
-    results.ys = input_multislice.iw_y;
-
-    %Images
-    results.images = zeros(input_multislice.nx, input_multislice.ny, length(input_multislice.thick));
-    for t = 1:length(output_multislice.data)
-        results.images(:, :, t) = transpose(output_multislice.data(t).m2psi_tot);
-    end
-
-    %Some additional details
-    results.thick = output_multislice.thick;
-    results.dx = output_multislice.dx;
-    results.dy = output_multislice.dy;
-
     end_time = datetime('now','TimeZone','local');
-    fprintf("CBED Simulation function finished at %s\n", end_time);
-    results.elapsed_time = seconds(end_time - start_time);
-
-    %% Save the data
-    if p.Results.save
-        save(sprintf("%s/%s_results.ecmat", p.Results.output_path, p.Results.simulation_name), "results", "-v7.3");
-    end
+    fprintf("HRTEM Simulation function finished at %s\n", end_time);
+    elapsed_time = seconds(end_time - start_time);
+    
+    %Output raw data
+    parameters = input_multem.toStruct();
+    save(sprintf("%s/%s_input.mat", p.Results.output_path, p.Results.simulation_name), "parameters", "-v7.3");
+    save(sprintf("%s/%s_output.mat", p.Results.output_path, p.Results.simulation_name), "output_multislice", "-v7.3");
+    
+    %%% Create results structure %%%
+    results = make_results(input_multem, output_multislice, 'elapsed_time', elapsed_time, 'title', p.Results.simulation_name);
+    
+    %%% Save HDF5 file %%%
+    multem2hdf5(sprintf('%s/%s_results.hdf5', p.Results.output_path, p.Results.simulation_name), results);
 end

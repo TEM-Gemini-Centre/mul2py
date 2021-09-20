@@ -203,7 +203,7 @@ function [input_multem] = STEM_setup(model_path, alpha, collection_angles, varar
     end
     
     defocus = p.Results.defocus;
-    input_multem.obj_lens_c_10 = defocus;
+    input_multem.cond_lens_c_10 = defocus;
 
     %%%%%%%%% defocus spread function %%%%%%%%%%%%
     dsf_sigma = ilc_iehwgd_2_sigma(32); % from defocus spread to standard deviation
