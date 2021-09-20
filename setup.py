@@ -11,7 +11,7 @@ setup(
     description="Conversion of MULTEM Multislice image simulation results from MATLAB to Python.",
     long_description=open('README.md').read(),
     classifiers=[
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.9",
         "Intended Audience :: Science/Research",
         "License :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
@@ -24,8 +24,7 @@ setup(
         "numpy",
         "matplotlib",
         "pathlib",
-        "hyperspy",
-        "h5py",
+        "hyperspy>=1.6.4",
         "argparse",
         "ase",
         "tabulate"

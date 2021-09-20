@@ -1,5 +1,5 @@
 name = "mul2py"
-version = "0.0.1a"
+version = "0.0.1b"
 author = "Emil Christiansen"
 license = "GPLv3"
 email = "emil.christiansen@ntnu.no"

@@ -3,7 +3,6 @@ import numpy as np
 import h5py as hdf
 from pathlib import Path
 
-import mul2py.buildtools
 import mul2py.exporttools
 import mul2py.io
 

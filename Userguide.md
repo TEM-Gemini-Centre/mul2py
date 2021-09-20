@@ -7,8 +7,6 @@ This is a user guide to introduce mul2py and [MULTEM](https://github.com/Ivanlh2
       - [2.1.1 Update mul2py](#211-to-update-mul2py)
     - [2.2 Virtual environments](#22-step-2-activatecreate-environment)
     - [2.3 Install mul2py](#23-step-3-add-mul2py-to-environment)
-  - [3 Convert MULTEM results](#3-convert-multem-results)
-    - [3.1 Working concept](#31-working-concept)
   - [4 Plotting images and making movies](#4-plotting-images-and-exporting-data-for-movies)
   - [5 Making models](#5-making-models)
   - [6 Running MULTEM simulations](#6-running-multem-simulations)
@@ -72,9 +70,9 @@ git checkout origin/branch
 [Up](#content)
 
 ### 2.2 Step 2: Activate/create environment
-If installing on the cluser, make sure that the correct Python version (3.7.x) is loaded along with its dependencies, i.e. you must first run
+If installing on the cluster, make sure that the correct Python version (3.7.x) is loaded along with its dependencies, i.e. you must first run
 ```bash
-module load GCCcore/8.2.0 Python/3.7.2
+module load GCCcore/8.2.0 Python/3.9.2
 ```
 Now you can create a new environment by navigating to where you want the environment to be installed by running
 ```bash
@@ -98,53 +96,83 @@ mul2py should now be installed in editable mode and be visible when the environm
 [Up](#content)
 
 ## 3 Convert MULTEM results
-The main use of mul2py is to convert MULTEM results. Because MULTEM works in MATLAB, output are usually given in MATLABs `.mat` files. Because the data can be quite large, MATLABs 7.3 version of the `.mat` should also be used. These files are a variant of the HDF format, and can be loaded into Python by the `h5py` pacakge.
+The main use of mul2py is to provide matlab function for storing MULTEM results as HDF5 files that are readable .
 
 HDF data files are structured in `Groups`, similar to folders. These Groups may contain more Groups, or datasets. Datasets may be either actual data, or references to data which is stored somewhere/somehow in the file. This is important, because the data from MULTEM consists of a mix of structs, cells, and arrays, which are stored differently in the files. A field in a `struct` is saved as a Group (and sub-`struct`s are stored as sub-Groups). Arrays and numbers are stored as direct Datasets, while cells are stored as Referenced Datasets.
 
-The point of mul2py is to make it easier to load this data into Python and construct Hyperspy signals for easier data inspection and analysis.
-
-mul2py prefers to get siulation result files in the "ecmat" format (pronounced easy-mat) - a custom pseudo fileformat that is really just a normal MATLAB .mat file with data stored in specific fields. This helps to read and load the file in a convenient way:
-```Python
-from mul2py.buildtools import make_signal
-signal = make_signal('my-simulation-results.ecmat')
-```
-As an alternative, mul2py can also create signals from regular .mat files, but this will still require data to be stored in specific fields. Most importantly, an output file must have the field `'output_multislice'` at its root, and an input file must have the field `'input_multislice'` at its root. Then, a signal can be made by
-```Python
-from mul2py.buildtools import load_input, load_output
-input = load_input('my-simulation-input-parameters.mat') #This returns a dictionary with all the input parameters
-signal, output = load_output('my-simulation-output.mat') #This returns an uncalibrated signal and the contents of the loaded file. This will eat memory quite fast (it duplicates the data a few times!) for large simulations.
-```
+The point of mul2py is to make it easier to export this data into HDF5 files that emulate the HyperSpy data format so that results can be read directly into Python.
 [Up](#content)
 
 ### 3.1 Working concept
-mul2py contains the subpackage `mul2py.io` that provides a tool to load the contents of a `hdf` file into an object with dynamic fields. These objects are used by the functions in `mul2py.buildtools.builders` to create hyperspy signals from the data files.
-
-The next part is not important for the use of this package, as the user should not need to directly access the hdf reader and contents and instead use builders to create their signal. However, if the user stores his/hers MULTEM data in a different way, he/she must create his/hers own builder based on the `HDFReader` and `HDFContent` objects.
-
-`mul2py.io.HDFReader` is an object that reads in the contents of a hdf file into `mul2py.HDFContent` objects. A `HDFContent` object contains more `HDFContent` objects in its `HDFContent._content` attribute (which may be accessed by the getter `HDFContent.content`), and the separate fields of this content is also stored as separate attributes in the object. 
-For example, if a HDF file "my-data.mat" contains the groups "Level1.Level2.Data" and "Level1.Level2.Metadata", this file can be read by `my_data = mul2py.io.hdf.HDFReader(my-data.mat)`, and the contents of various groups may be accessed by `my_data.Level1.Level2.Data.content` or `my_data.Level1.Level2.Data()`.
-Specifically, if a MULTEM `input_multislice` struct is stored as `input.mat`, the acceleration voltage of the simulation, and the STEM detectors can be accessed by  
-```Python
-from mul2py.io.hdf import HDFContent, HDFReader
-data = HDFReader("input.mat")
-E_0 = data.input_multislice.E_0()
-det0_outer_ang = data.input_multislice.detector.cir.outer_ang.outer_ang0.resolved_reference()
+mul2py provides matlab functions for handling data rearrangement and saving under `/matlab`.
+ 
+ #### 3.1.1 Making results structures
+ Results structures can be created using the `make_results.m` function. 
+ 
+ ##### 3.1.1.1 Inputs
+ The `make_results.m` script takes the following arguments:
+  - `multem_input` (*Required*): A `multem_input.parameters` object or a `struct` containing the input parameters to the simulation.
+  - `multem_output` (*Required*): A `struct` returned by the MULTEM simulation containing the data and some metadata.
+  - `title` (*Optional*): A `string` containing the title of the simulation.
+  - `elapsed_time` (*Optional*): A `double` containing the elapsed time of the simulation.
+  - `xs` (*Optional*): A vector containing the x-positions of the beam (for use together with custom scan schemes)
+  - `ys` (*Optional*): A vector containing the y-positions of the beam (for use together with custom scan schemes)
+  
+  
+  ##### 3.1.1.2 Output
+  The resulting `struct` containes the following fields:
+  
+  - `input`: A `struct` containing the input parameters.
+  - `dz`: The slice thickness of the simulation.
+  - `xs`: The x-positions of the beam (to be used for custom scan schemes).
+  - `ys`: The y-positions of the beam (to be used for custom scan schemes).
+  - `title`: The title of the simulation.
+  - `elapsed_time`: The elapsed time of the simulation.
+  - `dx`: The image (signal axis) scale in x-direction (in Å).
+  - `dy`: The image (signal axis) scale in y-direction (in Å).
+  - `images`: A (..., nx, ny) multidimensional array containing the simulated images.
+    - HRTEM/CBED/ED/etc: (nz, nx, ny).
+    - STEM: (ndet, nz, scanning_ns, scanning_ns).
+    - Custom scanning schemes: (nX, nY, nz, nx, ny)
+  - `axes`: A struct containing the axis information for each dimension of the data array compatible with the HyperSpy axis manager.
+  
+  ### 3.1.1.3 Example
+```matlab
+input_multem = multem_input.parameters %default parameters object. Change the properties to suit your needs
+start_time = datetime('now', 'TimeZone', 'local');
+output_multislice = input_multem.ilc_multem; %Runs the simulation
+end_time = datetime('now', 'TimeZone', 'local');
+elapsed_time = seconds(end_time - start_time);
+results = make_results(input_multem, output_multislice, "title", "my_simulation", "elapsed_time", elapsed_time); %Converts the data
 ```
-The last line in the previous code block require some detailed explanation. The detectors in MULTEM are stored as cells:
-```MATLAB
-input_multislice.detector.cir(1).outer_ang = 40;
-``` 
-Now, when this is loaded by h5py, the content of `input_multislice.detector.cir` will be an array of references to other datasets (this is just how MATLAB stores cells in HDF files, and we have to deal with the problems it causes). When unpacking these references, `mul2py` goes through all the references and resolves them into separate variables with a suffix. In this case, the outer angles of detector 1 and 2 are stored as `outer_ang.outer_ang0` and `outer_ang.outer_ang1`, respectively. Because these are resolved references, the data in each of these fields is stored in the `resolved_reference` attribute, so it should be accessed by calling `outer_ang.outer_ang0.resolved_reference()`. The final paranthesis is the mul2py way of getting the value of a `HDFContent` object.
 
 [Up](#content)
+
+#### 3.1.2 Exporting data
+Data can be exported to HDF5 using the `multem2hdf5.m` function.
+##### 3.1.2.1 Inputs
+- `filename`: The full path to store the data. SHould have the `.hdf5` extension.
+- `results_struct`: The results structure provided by the `make_results.m` function
+##### 3.1.2.2 Outputs
+- `fid`: The file-id of the HDF5 file. Should be -1 if the file is closed correctly.
+
+##### 3.1.2.3 Example
+```matlab
+input_multem = multem_input.parameters %default parameters object. Change the properties to suit your needs
+start_time = datetime('now', 'TimeZone', 'local');
+output_multislice = input_multem.ilc_multem; %Runs the simulation
+end_time = datetime('now', 'TimeZone', 'local');
+elapsed_time = seconds(end_time - start_time);
+results = make_results(input_multem, output_multislice, "title", "my_simulation", "elapsed_time", elapsed_time); %Converts the data
+multem2hdf5("my_simulation.hdf5", results);
+```
 
 ## 4 Plotting images and exporting data for movies
 Sometimes, when plotting images, it is also useful to add the atoms in the model to the image. mul2py provides tools for this through the `mul2py.exporttools` subpackage.
 ```Python
-from mul2py.buildtools import make_signal
+import hyperspy.api as hs
 from mul2py.exporttools.image import make_image
-signal = make_signal('my_simulation_results.ecmat')
+signal = hs.load('my_simulation_results.hdf5')
 
 # Plot the simulation results of the current inav of `signal` and mark the atoms above this slice (the part where the beam has travelled):
 fig, ax = make_image(signal)
