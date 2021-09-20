@@ -15,6 +15,7 @@ function write_metadata(group_id, metadata, plist, filename)
             else
                 sz = size(value);
                 if sz > 0
+                    fprintf('parameter %s is of type %s\n', name, class(value));
                     acpl_id = H5P.create('H5P_ATTRIBUTE_CREATE');
                     %info = H5G.get_info(group_id);
                     if isstr(value)
