@@ -92,9 +92,9 @@ def save_multem_model(filename, model, *args, dz=None, rms3d={}, B={}, lx=None, 
     if lx is None:
         lx = model.get_cell_lengths_and_angles()[order[0]]
     if ly is None:
-        lx = model.get_cell_lengths_and_angles()[order[0]]
+        ly = model.get_cell_lengths_and_angles()[order[1]]
     if lz is None:
-        lx = model.get_cell_lengths_and_angles()[order[0]]
+        lz = model.get_cell_lengths_and_angles()[order[2]]
     # Set sample dimensions (used in file header)
     print('Model size\n\tX: {:.2f} Å\n\tY: {:.2f} Å\n\tZ: {:.2f} Å'.format(lx, ly, lz))
 

@@ -137,8 +137,9 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     input_multem.temporal_spatial_incoh = 1;         % 1: Temporal and Spatial, 2: Temporal, 3: Spatial
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%% Incident wave %%%%%%%%%%%%%%%%%%%%%%%%%%
-    input_multem.iw_type = 4;                        % 1: Plane_Wave, 2: Convergent_wave, 3:User_Define, 4: auto
-    input_multem.iw_psi = read_psi_0_multem(input_multem.nx, input_multem.ny);    % user define incident wave
+    input_multem.iw_type = 2;
+    %input_multem.iw_type = 4;                        % 1: Plane_Wave, 2: Convergent_wave, 3:User_Define, 4: auto
+    %input_multem.iw_psi = read_psi_0_multem(input_multem.nx, input_multem.ny);    % user define incident wave
     
     %%%%%%%%%%%%%%%%%%%%%% Adjust beam x-y  %%%%%%%%%%%%%%%%%%%%%%%%%%%
     if isnan(p.Results.x)
