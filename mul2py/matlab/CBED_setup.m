@@ -139,7 +139,7 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%%%% Incident wave %%%%%%%%%%%%%%%%%%%%%%%%%%
     input_multem.iw_type = 2;
     %input_multem.iw_type = 4;                        % 1: Plane_Wave, 2: Convergent_wave, 3:User_Define, 4: auto
-    %input_multem.iw_psi = read_psi_0_multem(input_multem.nx, input_multem.ny);    % user define incident wave
+    input_multem.iw_psi = read_psi_0_multem(input_multem.nx, input_multem.ny);    % user define incident wave
     
     %%%%%%%%%%%%%%%%%%%%%% Adjust beam x-y  %%%%%%%%%%%%%%%%%%%%%%%%%%%
     if isnan(p.Results.x)
@@ -154,6 +154,8 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     end
     input_multem.iw_x = x;  % x position 
     input_multem.iw_y = y;  % y position
+    incident_wave = input_multem.ilc_incident_wave; %Calculate the incident wave
+    input_multem.iw_psi = incident_wave.psi0; %Store the incident wave
 
     %%%%%%%%%%%%%%%%%%%%%%%% condenser lens %%%%%%%%%%%%%%%%%%%%%%%%
     input_multem.cond_lens_m = 0;                   % Vortex momentum
