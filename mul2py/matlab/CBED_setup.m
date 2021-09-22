@@ -25,6 +25,10 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     default_print_parser = 0;
     default_print_details = 1;
     default_MULTEM_path = "/cluster/projects/itea_lille-nv-fys-tem/repositories/multem";
+    default_precision = 1; % eP_Float = 1, eP_double = 2
+    default_device = 2; % eD_CPU = 1, eD_GPU = 2
+    default_cpu_nthread = 1; %Number of CPUs
+    default_gpu_device = 1; % MULTEM can only use one GPU device at the time? Only ask for a single GPU from IDUN, and use this.
     
     p = inputParser;
     p.KeepUnmatched = true;
@@ -32,6 +36,7 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
     validScalarNum = @(x) isnumeric(x) && isscalar(x);
     validStrChar = @(x) ischar(x) || isstring(x);
+    valid1or2 = @(x) x==1 || x==2;
     
     addRequired(p, "model_path", validStrChar);
     addRequired(p, "alpha", validScalarPosNum);
@@ -49,6 +54,11 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     addParameter(p, "print_parser", default_print_parser, validScalarPosNum);
     addParameter(p, "print_details", default_print_details, validScalarPosNum);
     addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
+    addParameter(p, "precision", default_precision, valid1or2);
+    addParameter(p, "device", default_device, valid1or2);
+    addParameter(p, "cpu_nthread", default_cpu_nthread, validPosNum);
+    addParameter(p, "gpu_device", default_gpu_device, validScalarPosNum);
+    
     parse(p, model_path, alpha, varargin{:});
     
     if p.Results.print_parser
@@ -65,6 +75,12 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     
     %%%%%%%%%%%%%%%%%% Load multem default parameter %%%%%%%%$$%%%%%%%%%
     input_multem = multem_input.parameters;          % Load default values;
+    
+    %%%%%%%%%%%%%%%%%% Set system configuration %%%%%%%%%%%%%%%%%%%
+    input_multem.system_conf.precision = p.Results.precision;
+    input_multem.system_conf.device = p.Results.device;
+    input_multem.system_conf.cpu_nthread = p.Results.cpu_nthread;
+    input_multem.system_conf.gpu_device = p.Results.gpu_device;
 
     %%%%%%%%%%%%%%%%%%%%%%% Specimen information %%%%%%%%%%%%%%%%%%%%%%%
     load(p.Results.model_path);

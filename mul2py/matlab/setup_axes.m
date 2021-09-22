@@ -12,19 +12,37 @@ dimensions = size(size(results_struct.images), 2);
 
 %Determine predefined dimension catagories
 if isequal(results_struct.input.simulation_type, 11) || isequal(results_struct.input.simulation_type, 12)
-    data_x_dim = 1;
-    data_y_dim = 2;
-    data_z_dim = 3;
-    data_detector_dim = 4;
-    data_X_dim = 5;
-    data_Y_dim = 6;
+    if dimensions >=5 %5D dataset
+        data_x_dim = 1;
+        data_y_dim = 2;
+        data_X_dim = 3;
+        data_Y_dim = 4;
+        data_z_dim = 5;
+        data_detector_dim = 6;
+    else
+        data_x_dim = 1;
+        data_y_dim = 2;
+        data_z_dim = 3;
+        data_detector_dim = 4;
+        data_X_dim = 5;
+        data_Y_dim = 6;
+    end
 else
-    data_detector_dim = -1; %No detector dimensions
-    data_x_dim = 1;
-    data_y_dim = 2;
-    data_z_dim = 3;
-    data_X_dim = 4;
-    data_Y_dim = 5;
+    if dimensions >= 4 %5D dataset
+        data_detector_dim = -1; %No detector dimensions
+        data_x_dim = 1;
+        data_y_dim = 2;
+        data_X_dim = 3;
+        data_Y_dim = 4;
+        data_z_dim = 5;
+    else
+        data_detector_dim = -1; %No detector dimensions
+        data_x_dim = 1;
+        data_y_dim = 2;
+        data_z_dim = 3;
+        data_X_dim = 4;
+        data_Y_dim = 5;
+    end
 end
 dims = [data_x_dim, data_y_dim, data_z_dim, data_detector_dim, data_X_dim, data_Y_dim]; %predefined data dimensions
 
@@ -60,27 +78,6 @@ if dimensions >= data_y_dim
     axes_struct.y.navigate = false;
 end
 
-if dimensions >= data_z_dim
-    axes_struct.z = struct();
-    axes_struct.z.name = 'z';
-    axes_struct.z.scale = results_struct.input.spec_dz;
-    axes_struct.z.offset = results_struct.thick(1);
-    axes_struct.z.units = 'Å';
-    axes_struct.z.size = int64(size(results_struct.images, data_z_dim));
-    axes_struct.z.navigate = true;
-    
-end
-
-if dimensions >= data_detector_dim && data_detector_dim > 0
-    axes_struct.detectors = struct();
-    axes_struct.detectors.name = 'detectors';
-    axes_struct.detectors.scale = 1;
-    axes_struct.detectors.offset = 0;
-    axes_struct.detectors.units = '';
-    axes_struct.detectors.size = int64(size(results_struct.images, data_detector_dim));
-    axes_struct.detectors.navigate = true;
-end
-
 if dimensions >= data_X_dim
     axes_struct.X = struct();
     axes_struct.X.name = 'X';
@@ -112,5 +109,27 @@ if dimensions > max(dims)
         axes_struct.(spintf('axes%i', dim)).navigate = true;
     end
 end
+
+if dimensions >= data_z_dim
+    axes_struct.z = struct();
+    axes_struct.z.name = 'z';
+    axes_struct.z.scale = results_struct.thick(2) - results_struct.thick(1);%results_struct.input.spec_dz;
+    axes_struct.z.offset = results_struct.thick(1);
+    axes_struct.z.units = 'Å';
+    axes_struct.z.size = int64(size(results_struct.images, data_z_dim));
+    axes_struct.z.navigate = true;
+    
+end
+
+if dimensions >= data_detector_dim && data_detector_dim > 0
+    axes_struct.detectors = struct();
+    axes_struct.detectors.name = 'detectors';
+    axes_struct.detectors.scale = 1;
+    axes_struct.detectors.offset = 0;
+    axes_struct.detectors.units = '';
+    axes_struct.detectors.size = int64(size(results_struct.images, data_detector_dim));
+    axes_struct.detectors.navigate = true;
+end
+
 end
 

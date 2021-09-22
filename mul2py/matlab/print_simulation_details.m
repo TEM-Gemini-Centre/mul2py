@@ -1,6 +1,6 @@
 function [details] = print_simulation_details(input_multem, varargin)
     details = "";
-    default_MULTEM_path = '/lustre1/projects/itea_lille-nv-fys-tem/MULTEM/MULTEM';
+    default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/repositories/multem';
     default_print_parser = 0;
     
     validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && x>=0;

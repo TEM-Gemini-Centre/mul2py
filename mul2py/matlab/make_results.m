@@ -78,8 +78,8 @@ if isequal(multem_input.simulation_type, 11) || isequal(multem_input.simulation_
         end
     end
 else
-    %HRTEM and other direct data: Should not be used for custom "scanning"
-    %modes
+    %HRTEM and other direct data: Should only be used for the "first" frame
+    %of custom scanning schemes
     results.dx = multem_output.dx;
     results.dy = multem_output.dy;
     if length(p.Results.xs) > 1 && length(p.Results.ys) > 1

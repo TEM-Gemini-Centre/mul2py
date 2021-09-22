@@ -1,13 +1,68 @@
-function [fid] = multem2hdf5(filename, results_struct)
-%multem2hdf5 save multem data to a hdf5 file.
-%   Detailed explanation goes here
+function [fid] = multem2hdf5(filename, results_struct, varargin)
+%multem2hdf5 save multem results structure to a hdf5 file.
+%   Writes the data and relevant metadata stored in a `struct` to a HDF5 file in a format that
+%   is readable by HyperSpy (version 3.0).
+%   See also:
+%   `make_results`, `make5Dresults`, and `setup_axes`.
+
+default_debug = false;
+optargs = {default_debug};
+numvarargs = length(varargin);
+if numvarargs > length(optargs)
+    error('myfuns:somefun2Alt:TooManyInputs', 'requires at most %i optional inputs', length(optargs));
+end
+optargs(1:numvarargs) = varargin;
+
+[debug] = optargs{:};
+
+
+    function [ext] = get_extension(filename)
+        [filepath, name, ext] = fileparts(filename);
+    end
+
+    function [valid] = validate_fields(structure, mandatory_fields)
+        structure_fields = fieldnames(structure);
+        for name_idx = 1:length(mandatory_fields)
+            valid = ismember(mandatory_fields(name_idx), structure_fields);
+            if ~valid
+                return
+            end
+        end
+        valid = true;
+    end
+validFilename = @(x) (ischar(x) || isstring(x)) && isequal(get_extension(x), '.hdf5');
+mandatory_results_fields = ["dx" "dy" "dz" "thick" "xs" "ys" "title" "elapsed_time" "scan_shape" "input" "images" "axes"];
+validResults = @(x) isstruct(x) && validate_fields(x, mandatory_results_fields);
+validDebug = @(x) islogical(x);
+
+if ~validFilename(filename)
+    error('mul2py:multem2hdf5:InvalidFilename', 'Filename %s is invalid, valid filenames should contain the ".hdf5" extension.', filename);
+end
+
+if ~validResults(results_struct)
+    missing_fields = [];
+    results_fields = fieldnames(results_struct);
+    for field_idx = 1:length(mandatory_results_fields)
+        if ~ismember(mandatory_results_fields(field_idx), results_fields)
+            missing_fields = [missing_fields mandandatory_results_fields(field_idx)];
+        end
+    end
+    error('mul2py:multem2hdf5:InvalidResults', 'Provided results structure is not suited. Results structure has fields "%s" but misses fields "%s"', strjoin(fieldnames(results_struct), ', '), strjoin(missing_fields, ', '));
+end
+
+if ~validDebug(debug)
+    error('mul2py:multem2hdf5:InvalidDebug', 'Debug must be a `logical`, not %s', class(debug));
+end
 
 %Function for writing metadata to a group.
-function write_metadata(group_id, metadata, plist, filename)
+    function write_metadata(group_id, metadata, plist, filename)
+        if debug
+            fprintf('Writing metadata (class %s) to group %s of "%s"', class(metadata), H5I.get_name(group_id), filename);
+        end
         fields = fieldnames(metadata);
         for idx = 1:length(fields)
             name = fields{idx};
-            value = getfield(metadata, name);
+            value = metadata.(sprintf('%s', name));%getfield(metadata, name);
             if isequal(class(value), 'multem_input.parameters') || isequal(class(value), 'multem_input.system_conf') || isequal(class(value), 'multem_input.detector') || isequal(class(value), 'struct')
                 temp_gid = H5G.create(group_id, name, plist, plist, plist);
                 write_metadata(temp_gid, value, plist, filename)
@@ -15,10 +70,13 @@ function write_metadata(group_id, metadata, plist, filename)
             else
                 sz = size(value);
                 if sz > 0
-                    fprintf('parameter %s is of type %s\n', name, class(value));
+                    group_name = H5I.get_name(group_id);
+                    if debug
+                        fprintf('Setting %s%s/%s of type %s\n', filename, group_name, name, class(value));
+                    end
                     acpl_id = H5P.create('H5P_ATTRIBUTE_CREATE');
                     %info = H5G.get_info(group_id);
-                    if isstr(value) || isstring(value)
+                    if ischar(value) || isstring(value)
                         type_id = H5T.copy('H5T_C_S1');
                         H5T.set_size(type_id, size(value, 2));
                         encoding = H5ML.get_constant_value('H5T_CSET_ASCII');
@@ -121,9 +179,9 @@ results_gid = H5G.create(experiments_gid, results_struct.title, plist, plist, pl
 
 %Greate groups for the axes-data and set attributes
 axes_names = fieldnames(results_struct.axes);
-for idx=1:dimensions
-    axis_gid = H5G.create(results_gid, sprintf('axis-%i', idx-1), plist, plist, plist);%greate group
-    ax = results_struct.axes.(axes_names{dimensions - (idx-1)}); %Write the axis metadata to the group. Note that the axes_names should count "backwards"!
+for dimension=1:dimensions
+    axis_gid = H5G.create(results_gid, sprintf('axis-%i', dimension-1), plist, plist, plist);%greate group
+    ax = results_struct.axes.(axes_names{dimensions - (dimension-1)}); %Write the axis metadata to the group. Note that the axes_names should count "backwards"!
     write_metadata(axis_gid, ax, plist, filename);
     H5G.close(axis_gid);
 end
@@ -150,7 +208,7 @@ signal_gid = H5G.create(metadata_gid, 'Signal', plist, plist, plist);
 signal_metadata = struct();
 signal_metadata.binned = 0;
 signal_metadata.record_by = 'image';
-signal.metadata.signal_type = 'simulation';
+signal_metadata.signal_type = 'simulation';
 write_metadata(signal_gid, signal_metadata, plist, filename);
 H5G.close(signal_gid);
 %Parameters
@@ -163,6 +221,30 @@ original_metadata_gid = H5G.create(results_gid, 'original_metadata', plist, plis
 %Parameters
 parameters_gid = H5G.create(original_metadata_gid, 'parameters', plist, plist, plist);
 write_metadata(parameters_gid, results_struct.input, plist, filename);
+if ismember('scan_inputs', fieldnames(results_struct))
+    write_metadata(parameters_gid, results_struct.scan_inputs, plist, filename);
+end
+
+if ismember('probes', fieldnames(results_struct))
+    if size(results_struct.probes, 1) >= 32
+        x_chunks = 32;
+    else
+        x_chunks = size(results_struct.probes, 1);
+    end
+    
+    if size(results_struct.probes, 2) >= 32
+        y_chunks = 32;
+    else
+        y_chunks = size(results_struct.probes, 2);
+    end
+    probe_chunks = [x_chunks, y_chunks, size(results_struct.probes, 3), size(results_struct.probes, 4)];%
+    loc = H5I.get_name(parameters_gid);
+    h5create(filename, sprintf('%s/probes_re', loc), size(results_struct.probes), 'Datatype', 'double', 'ChunkSize', probe_chunks, 'Deflate', 4, 'Shuffle', 1);
+    h5write(filename, sprintf('%s/probes_re', loc), real(results_struct.probes));
+    
+    h5create(filename, sprintf('%s/probes_im', loc), size(results_struct.probes), 'Datatype', 'double', 'ChunkSize', probe_chunks, 'Deflate', 4, 'Shuffle', 1);
+    h5write(filename, sprintf('%s/probes_im', loc), imag(results_struct.probes));
+end
 H5G.close(parameters_gid);
 H5G.close(original_metadata_gid);
 
