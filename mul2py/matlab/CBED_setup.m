@@ -56,7 +56,7 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
     addParameter(p, "precision", default_precision, valid1or2);
     addParameter(p, "device", default_device, valid1or2);
-    addParameter(p, "cpu_nthread", default_cpu_nthread, validPosNum);
+    addParameter(p, "cpu_nthread", default_cpu_nthread, validScalarPosNum);
     addParameter(p, "gpu_device", default_gpu_device, validScalarPosNum);
     
     parse(p, model_path, alpha, varargin{:});

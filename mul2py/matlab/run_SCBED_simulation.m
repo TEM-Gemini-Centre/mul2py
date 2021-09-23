@@ -16,7 +16,7 @@ function [results] = run_SCBED_simulation(model_path, alpha, varargin)
     end
 %% Timestamp
 start_time = datetime('now','TimeZone','local');
-fprintf("Starting CBED simulation function at %s\n", start_time);
+fprintf("Starting SCBED simulation function at %s\n", start_time);
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Argument Parsing %%%%%%%%%%%%%%%%%%%%%%%%
 fprintf("Parsing Arguments\n")
@@ -93,7 +93,7 @@ if p.Results.save
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Simulation Setup %%%%%%%%%%%%%%%%%%%%%%%%
-default_input = CBED_setup(model_path, convergence_angle, varargin{:}); %Get default input to calculate scan region if default values
+default_input = CBED_setup(model_path, alpha, varargin{:}); %Get default input to calculate scan region if default values
 if p.Results.step_x == 0
     step_x = default_input.spec_cryst.a/p.Results.scan_shape(1);
 else
@@ -122,7 +122,7 @@ for ix = 1:p.Results.scan_shape(1)
     for iy = 1:p.Results.scan_shape(2)
         varargin = set_vararg(varargin{:}, 'x', xs(ix)); %update x-position of arguments
         varargin = set_vararg(varargin{:}, 'y', ys(iy)); %update y-position of arguments
-        input = CBED_setup(model_path, convergence_angle, varargin{:});
+        input = CBED_setup(model_path,  alpha, varargin{:});
         save(sprintf("%s_input_%i_%i.mat", title, ix, iy), "input", "-v7.3");
         fprintf("Simulating CBED stack at (x,y) = (%f,%f)\r", input_multem.iw_x, input_multem.iw_y);
         output = input.ilc_multem;
