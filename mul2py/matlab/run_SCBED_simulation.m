@@ -110,7 +110,7 @@ ys = (0:step_y:p.Results.scan_shape(2)*step_y) + default_input.iw_y; %Scan from 
 inputs = [];
 outputs = [];
 
-fprintf('Simulating %s using scan positions:\nx: ', p.Results.title)
+fprintf('Simulating %s using scan positions:\nx: ', p.Results.simulation_name)
 fprintf('%d, ', xs);
 fprintf('\ny: ')
 fprintf('%d, ', ys);
