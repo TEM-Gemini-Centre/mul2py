@@ -95,13 +95,13 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%% Simulation Setup %%%%%%%%%%%%%%%%%%%%%%%%
 default_input = CBED_setup(model_path, alpha, varargin{:}); %Get default input to calculate scan region if default values
 if p.Results.step_x == 0
-    step_x = default_input.spec_cryst.a/p.Results.scan_shape(1);
+    step_x = default_input.spec_cryst_a/p.Results.scan_shape(1);
 else
     step_x = p.Results.step_x;
 end
 
 if p.Results.step_y == 0
-    step_y = default_input.spec_cryst.b/p.Results.scan_shape(2);
+    step_y = default_input.spec_cryst_b/p.Results.scan_shape(2);
 else
     step_y = p.Results.step_y;
 end
