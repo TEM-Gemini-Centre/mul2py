@@ -120,8 +120,8 @@ fprintf('\n');
 start_time = datetime('now','TimeZone','local');
 for ix = 1:p.Results.scan_shape(1)
     for iy = 1:p.Results.scan_shape(2)
-        varargin = set_vararg(varargin{:}, 'x', xs(ix)); %update x-position of arguments
-        varargin = set_vararg(varargin{:}, 'y', ys(iy)); %update y-position of arguments
+        varargin = set_vararg(varargin, 'x', xs(ix)); %update x-position of arguments
+        varargin = set_vararg(varargin, 'y', ys(iy)); %update y-position of arguments
         input = CBED_setup(model_path,  alpha, varargin{:});
         save(sprintf("%s_input_%i_%i.mat", title, ix, iy), "input", "-v7.3");
         fprintf("Simulating CBED stack at (x,y) = (%f,%f)\r", input_multem.iw_x, input_multem.iw_y);
