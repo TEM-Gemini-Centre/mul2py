@@ -6,8 +6,7 @@ function [results] = run_SCBED_simulation(model_path, alpha, varargin)
         if logical(mod(length(varargs), 2))
             error('mul2py:run_SCBED_simulation:set_vararg:OddVarargs: %s', 'Varargs should have an even number of arguments');
         end
-        arg_idx = 1;
-        while arg_idx <= length(varargs)
+        for arg_idx = 1:2:length(varargs)
             if isequal(varargs{arg_idx}, name)
                 varargs{arg_idx+1} = value;
                 break
