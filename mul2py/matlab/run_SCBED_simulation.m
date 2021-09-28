@@ -6,11 +6,17 @@ function [results] = run_SCBED_simulation(model_path, alpha, varargin)
         if logical(mod(length(varargs), 2))
             error('mul2py:run_SCBED_simulation:set_vararg:OddVarargs: %s', 'Varargs should have an even number of arguments');
         end
+        changed_value = false;
         for arg_idx = 1:2:length(varargs)
             if isequal(varargs{arg_idx}, name)
                 varargs{arg_idx+1} = value;
+                changed_value = true;
                 break
             end
+        end
+        if ~changed_value
+            varargs = [varargs {name value}];
+            changed_value = true;
         end
     end
 %% Timestamp
@@ -104,8 +110,8 @@ if p.Results.step_y == 0
 else
     step_y = p.Results.step_y;
 end
-xs = (0:step_x:p.Results.scan_shape(1)*step_x) + default_input.iw_x; %Scan from the first scan position.
-ys = (0:step_y:p.Results.scan_shape(2)*step_y) + default_input.iw_y; %Scan from the first scan position.
+xs = (0:step_x:p.Results.scan_shape(1)*step_x-step_x) + default_input.iw_x; %Scan from the first scan position.
+ys = (0:step_y:p.Results.scan_shape(2)*step_y-step_y) + default_input.iw_y; %Scan from the first scan position.
 inputs = [];
 outputs = [];
 
@@ -120,17 +126,18 @@ start_time = datetime('now','TimeZone','local');
 for ix = 1:p.Results.scan_shape(1)
     for iy = 1:p.Results.scan_shape(2)
         fprintf("Simulating CBED stack (%i, %i) at (x,y) = (%f,%f):\r", ix, iy, xs(ix), ys(iy));
-        fprintf("\tUpdating inputarguments...\r");
+        fprintf("\tUpdating input arguments...\r");
         varargin = set_vararg(varargin, 'x', xs(ix)); %update x-position of arguments
         varargin = set_vararg(varargin, 'y', ys(iy)); %update y-position of arguments
+        varargin = set_vararg(varargin, 'print_details', 0); %Don't print any details.
         input = CBED_setup(model_path,  alpha, varargin{:});
         fprintf("\tSaving input arguments...\r");
-        save(sprintf("%s_input_%i_%i.mat", title, ix, iy), "input", "-v7.3");
-        fprintf("\Running simulation at (x,y) = (%f,%f)...\r", input.iw_x, input.iw_y);
+        save(sprintf("%s/%s_input_%i_%i.mat", p.Results.output_path, p.Results.simulation_name, ix, iy), "input", "-v7.3");
+        fprintf("\tRunning simulation at (x,y) = (%f,%f)...\r", input.iw_x, input.iw_y);
         output = input.ilc_multem;
         fprintf("\tSaving output...\r");
-        save(sprintf("%s_output_%i_%i.mat", title, ix, iy), "output", "-v7.3");
-        fprintf("\tUpdating arrays...");
+        save(sprintf("%s/%s_output_%i_%i.mat", p.Results.output_path, p.Results.simulation_name, ix, iy), "output", "-v7.3");
+        fprintf("\tUpdating arrays...\r");
         inputs = [inputs input];
         outputs = [outputs output];
         fprintf("\tFinished with stack at (%i,%i).\r", ix, iy);
@@ -142,7 +149,7 @@ elapsed_time = seconds(end_time - start_time);
 
 fprintf("Constructing results structure\n");
 %%% Create results structure %%%
-results = make5Dresults(inputs, outputs, scan_shape, xs, ys, p.Results.simulation_name, elapsed_time);
+results = make5Dresults(inputs, outputs, p.Results.scan_shape, xs, ys, p.Results.simulation_name, elapsed_time);
 
 fprintf("Saving HDF5 file\n");
 %%% Save HDF5 file %%%

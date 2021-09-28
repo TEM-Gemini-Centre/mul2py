@@ -46,9 +46,9 @@ validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
 validStrChar = @(x) ischar(x) || isstring(x);
 validVector = @(x) isrow(x) || iscol(x);
 mandatory_input_fields = fieldnames(multem_input.parameters);
-validMultemInputs = @(x) length(x) > 1 && (isequal(class(x), 'multem_input.parameters') || isstruct(x)) && validate_fields(x, mandatory_input_fields);
+validMultemInputs = @(x) length(x) >= 1 && (isequal(class(x), 'multem_input.parameters') || isstruct(x)) && validate_fields(x, mandatory_input_fields);
 mandatory_output_fields = ["dx", "dy", "x", "y", "thick", "data"];
-validMultemOutputs = @(x) length(x) > 1 && isstruct(x) && validate_fields(x, mandatory_output_fields) && (ismember('m2psi_tot', fieldnames(x.data)) || ismember('image_tot', fieldnames(x.data)));
+validMultemOutputs = @(x) length(x) >= 1 && isstruct(x) && validate_fields(x, mandatory_output_fields) && (ismember('m2psi_tot', fieldnames(x.data)) || ismember('image_tot', fieldnames(x.data)));
 validShape = @(x) isnumeric(x) && (isrow(x) || iscolumn(x)) && length(x)==2;
 
 
@@ -56,7 +56,7 @@ validShape = @(x) isnumeric(x) && (isrow(x) || iscolumn(x)) && length(x)==2;
 
 %Validate required inputs
 if ~validMultemInputs(multem_inputs)
-    error('mul2py:multem2hdf5:InvalidResults', 'Provided results structure of class "%s" is not supported', class(multem_inputs));
+    error('mul2py:multem2hdf5:InvalidResults', 'Provided results structure of class "%s" with length %i is not supported', class(multem_inputs), length(multem_inputs));
 end
 if ~validMultemOutputs(multem_outputs)
     error('mul2py:multem2hdf5:InvalidOutputs', 'Provided results outputs of class "%s" is not supported', class(multem_outputs));

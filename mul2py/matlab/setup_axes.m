@@ -81,7 +81,11 @@ end
 if dimensions >= data_X_dim
     axes_struct.X = struct();
     axes_struct.X.name = 'X';
-    axes_struct.X.scale = results_struct.xs(2) - results_struct.xs(1);
+    if length(results_struct.xs) > 1
+        axes_struct.X.scale = results_struct.xs(2) - results_struct.xs(1);
+    else
+        axes_struct.X.scale = 1;
+    end
     axes_struct.X.offset = results_struct.xs(1);
     axes_struct.X.units = 'Å';
     axes_struct.X.size = int64(size(results_struct.images, data_X_dim));
@@ -91,7 +95,11 @@ end
 if dimensions >= data_Y_dim
     axes_struct.Y = struct();
     axes_struct.Y.name = 'Y';
-    axes_struct.Y.scale = results_struct.ys(2) - results_struct.ys(1);
+    if length(results_struct.ys) > 1
+        axes_struct.Y.scale = results_struct.ys(2) - results_struct.ys(1);
+    else
+        axes_struct.Y.scale = 1;
+    end
     axes_struct.Y.offset = results_struct.ys(1);
     axes_struct.Y.units = 'Å';
     axes_struct.Y.size = int64(size(results_struct.images, data_Y_dim));
