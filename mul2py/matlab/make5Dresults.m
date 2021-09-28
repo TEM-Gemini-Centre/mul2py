@@ -42,13 +42,29 @@ function [results] = make5Dresults(multem_inputs, multem_outputs, scan_shape, va
         valid = true;
     end
 
+    function [valid] = validate_outputs(output_structure)
+        mandatory_output_fields = ["dx", "dy", "x", "y", "thick", "data"];
+        valid = validate_fields(output_structure, mandatory_output_fields);
+        if ~valid
+            return
+        end
+        for idx=1:length(output_structure)
+            valid = ismember('m2psi_tot', fieldnames(output_structure(idx).data));
+            if ~valid
+                return
+            end
+        end
+        
+        
+    end
+
+
 validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
 validStrChar = @(x) ischar(x) || isstring(x);
 validVector = @(x) isrow(x) || iscol(x);
 mandatory_input_fields = fieldnames(multem_input.parameters);
 validMultemInputs = @(x) length(x) >= 1 && (isequal(class(x), 'multem_input.parameters') || isstruct(x)) && validate_fields(x, mandatory_input_fields);
-mandatory_output_fields = ["dx", "dy", "x", "y", "thick", "data"];
-validMultemOutputs = @(x) length(x) >= 1 && isstruct(x) && validate_fields(x, mandatory_output_fields) && (ismember('m2psi_tot', fieldnames(x.data)) || ismember('image_tot', fieldnames(x.data)));
+validMultemOutputs = @(x) length(x) >= 1 && isstruct(x) && validate_outputs(x);
 validShape = @(x) isnumeric(x) && (isrow(x) || iscolumn(x)) && length(x)==2;
 
 
