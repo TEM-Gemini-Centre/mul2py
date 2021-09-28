@@ -64,6 +64,10 @@ addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
 default_save = 1;
 addParameter(p, "save", default_save, validPositiveNumber);
 
+%Save separate stacs as well?
+default_save_separate = 0;
+addParameter(p, "save_separate", default_save_separate, validPositiveNumber);
+
 %Where to put output
 default_output_path = './';
 addParameter(p, "output_path", default_output_path, validStrChar);
@@ -133,14 +137,18 @@ for ix = 1:p.Results.scan_shape(1)
         varargin = set_vararg(varargin, 'print_details', 0); %Don't print any details.
         input = CBED_setup(model_path,  alpha, varargin{:});
         
-        fprintf("\tSaving input arguments...\r");
-        save(sprintf("%s/%s_input_%i_%i.mat", p.Results.output_path, p.Results.simulation_name, ix, iy), "input", "-v7.3");
+        if p.Results.save_separate
+            fprintf("\tSaving input arguments...\r");
+            save(sprintf("%s/%s_input_%i_%i.mat", p.Results.output_path, p.Results.simulation_name, ix, iy), "input", "-v7.3");
+        end
         
         fprintf("\tRunning simulation at (x,y) = (%f,%f)...\r", input.iw_x, input.iw_y);
         output = input.ilc_multem;
         
-        fprintf("\tSaving output...\r");
-        save(sprintf("%s/%s_output_%i_%i.mat", p.Results.output_path, p.Results.simulation_name, ix, iy), "output", "-v7.3");
+        if p.Results.save_separate
+            fprintf("\tSaving output...\r");
+            save(sprintf("%s/%s_output_%i_%i.mat", p.Results.output_path, p.Results.simulation_name, ix, iy), "output", "-v7.3");
+        end
         
         fprintf("\tUpdating arrays...\r");
         inputs = [inputs input];
