@@ -126,20 +126,26 @@ start_time = datetime('now','TimeZone','local');
 for ix = 1:p.Results.scan_shape(1)
     for iy = 1:p.Results.scan_shape(2)
         fprintf("Simulating CBED stack (%i, %i) at (x,y) = (%f,%f):\r", ix, iy, xs(ix), ys(iy));
+        
         fprintf("\tUpdating input arguments...\r");
         varargin = set_vararg(varargin, 'x', xs(ix)); %update x-position of arguments
         varargin = set_vararg(varargin, 'y', ys(iy)); %update y-position of arguments
         varargin = set_vararg(varargin, 'print_details', 0); %Don't print any details.
         input = CBED_setup(model_path,  alpha, varargin{:});
+        
         fprintf("\tSaving input arguments...\r");
         save(sprintf("%s/%s_input_%i_%i.mat", p.Results.output_path, p.Results.simulation_name, ix, iy), "input", "-v7.3");
+        
         fprintf("\tRunning simulation at (x,y) = (%f,%f)...\r", input.iw_x, input.iw_y);
         output = input.ilc_multem;
+        
         fprintf("\tSaving output...\r");
         save(sprintf("%s/%s_output_%i_%i.mat", p.Results.output_path, p.Results.simulation_name, ix, iy), "output", "-v7.3");
+        
         fprintf("\tUpdating arrays...\r");
         inputs = [inputs input];
         outputs = [outputs output];
+        
         fprintf("\tFinished with stack at (%i,%i).\r", ix, iy);
     end
 end
