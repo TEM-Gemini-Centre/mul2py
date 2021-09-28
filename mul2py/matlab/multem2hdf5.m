@@ -44,7 +44,7 @@ if ~validResults(results_struct)
     results_fields = fieldnames(results_struct);
     for field_idx = 1:length(mandatory_results_fields)
         if ~ismember(mandatory_results_fields(field_idx), results_fields)
-            missing_fields = [missing_fields mandandatory_results_fields(field_idx)];
+            missing_fields = [missing_fields mandatory_results_fields(field_idx)];
         end
     end
     error('mul2py:multem2hdf5:InvalidResults', 'Provided results structure is not suited. Results structure has fields "%s" but misses fields "%s"', strjoin(fieldnames(results_struct), ', '), strjoin(missing_fields, ', '));
