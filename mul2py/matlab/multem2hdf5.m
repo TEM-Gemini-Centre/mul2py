@@ -31,7 +31,7 @@ optargs(1:numvarargs) = varargin;
         valid = true;
     end
 validFilename = @(x) (ischar(x) || isstring(x)) && isequal(get_extension(x), '.hdf5');
-mandatory_results_fields = ["dx" "dy" "dz" "thick" "xs" "ys" "title" "elapsed_time" "scan_shape" "input" "images" "axes"];
+mandatory_results_fields = ["dx" "dy" "dz" "thick" "xs" "ys" "title" "elapsed_time" "input" "images" "axes"];
 validResults = @(x) isstruct(x) && validate_fields(x, mandatory_results_fields);
 validDebug = @(x) islogical(x);
 
