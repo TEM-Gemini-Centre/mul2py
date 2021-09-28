@@ -120,24 +120,32 @@ fprintf('\n');
 start_time = datetime('now','TimeZone','local');
 for ix = 1:p.Results.scan_shape(1)
     for iy = 1:p.Results.scan_shape(2)
+        fprintf("Simulating CBED stack (%i, %i) at (x,y) = (%f,%f):\r", ix, iy, xs(ix), ys(iy));
+        fprintf("\tUpdating inputarguments...\r");
         varargin = set_vararg(varargin, 'x', xs(ix)); %update x-position of arguments
         varargin = set_vararg(varargin, 'y', ys(iy)); %update y-position of arguments
         input = CBED_setup(model_path,  alpha, varargin{:});
+        fprintf("\tSaving input arguments...\r");
         save(sprintf("%s_input_%i_%i.mat", title, ix, iy), "input", "-v7.3");
-        fprintf("Simulating CBED stack at (x,y) = (%f,%f)\r", input_multem.iw_x, input_multem.iw_y);
+        fprintf("\Running simulation at (x,y) = (%f,%f)...\r", input.iw_x, input.iw_y);
         output = input.ilc_multem;
+        fprintf("\tSaving output...\r");
         save(sprintf("%s_output_%i_%i.mat", title, ix, iy), "output", "-v7.3");
+        fprintf("\tUpdating arrays...");
         inputs = [inputs input];
         outputs = [outputs output];
+        fprintf("\tFinished with stack at (%i,%i).\r", ix, iy);
     end
 end
 end_time = datetime('now','TimeZone','local');
 fprintf("SCBED Simulation function finished at %s\n", end_time);
 elapsed_time = seconds(end_time - start_time);
 
+fprintf("Constructing results structure\n");
 %%% Create results structure %%%
 results = make5Dresults(inputs, outputs, scan_shape, xs, ys, p.Results.simulation_name, elapsed_time);
 
+fprintf("Saving HDF5 file\n");
 %%% Save HDF5 file %%%
 multem2hdf5(sprintf('%s/%s_results.hdf5', p.Results.output_path, p.Results.simulation_name), results);
 end
