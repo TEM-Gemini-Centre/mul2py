@@ -54,10 +54,23 @@ function [results] = make5Dresults(multem_inputs, multem_outputs, scan_shape, va
                 return
             end
         end
-        
-        
     end
+    
+    function [struct_array] = reshape_struct_vector(struct_vector, shape)
+        if ~isequal(prod(shape), length(struct_vector))
+            error('mul2py:run_SCBED_simulation:reshape_struct_vector:DimnsionError: %s', 'prod(%f) of shape does not match length %i of struct_vector', prod(shape), length(struct_vector));
+        end
 
+        struct_array = struct_vector(1);
+
+        counter = 1;
+        for x = 1:shape(1)
+            for y = 1:shape(2)
+                struct_array(x, y) = struct_vector(counter);
+                counter = counter + 1 ;
+            end
+        end
+    end
 
 validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
 validStrChar = @(x) ischar(x) || isstring(x);
@@ -172,8 +185,8 @@ results.probes = zeros(multem_inputs(1).nx, multem_inputs(1).ny, scan_shape(1), 
 
 %Construct data array
 results.images = zeros(multem_inputs(1).nx, multem_inputs(1).ny, scan_shape(1), scan_shape(2), length(results.thick));
-outputs = reshape(multem_outputs, scan_shape);
-inputs = reshape(multem_inputs, scan_shape);
+outputs = reshape_struct_vector(multem_outputs, scan_shape);
+inputs = reshape_struct_vector(multem_inputs, scan_shape);
 for x = 1:scan_shape(1)
     for y = 1:scan_shape(2)
         output = outputs(x, y);
