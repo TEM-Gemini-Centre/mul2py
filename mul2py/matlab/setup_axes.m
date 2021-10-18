@@ -121,7 +121,7 @@ end
 if dimensions >= data_z_dim
     axes_struct.z = struct();
     axes_struct.z.name = 'z';
-    axes_struct.z.scale = results_struct.thick(2) - results_struct.thick(1);%results_struct.input.spec_dz;
+    axes_struct.z.scale = mean( results_struct.thick(2:2:length(results_struct.thick)) - results_struct.thick(1:2:length(results_struct.thick)-1));
     axes_struct.z.offset = results_struct.thick(1);
     axes_struct.z.units = 'Å';
     axes_struct.z.size = int64(size(results_struct.images, data_z_dim));

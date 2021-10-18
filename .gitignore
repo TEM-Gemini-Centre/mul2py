@@ -133,3 +133,9 @@ dmypy.json
 .hdf5
 .mat
 .hspy
+*.wisdom
+*.wisdom
+*.hdf5
+mul2py/matlab/STEM_test_70x70_output.mat
+mul2py/matlab/STEM_test_70x70_input.mat
+*.asv

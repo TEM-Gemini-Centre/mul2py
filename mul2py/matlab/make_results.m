@@ -59,12 +59,33 @@ if isequal(multem_input.simulation_type, 11) || isequal(multem_input.simulation_
         detectors = length(multem_output.data(1).image_tot);
     end
     
-    results.dx = (multem_input.scanning_xe-multem_input.scanning_x0) / double(multem_input.scanning_ns);
-    results.dy = (multem_input.scanning_ye-multem_input.scanning_y0) / double(multem_input.scanning_ns);
-    results.images = zeros(multem_input.scanning_ns, multem_input.scanning_ns, length(multem_output.data), detectors);
     if length(multem_output.data) == 1
-        for det=1:detectors
-            results.images(:,:, 1, det) = transpose(multem_output.data.image_tot(det).image);
+        image_tot = multem_output.data.image_tot;
+    else
+        image_tot = multem_output.data(1).image_tot;
+    end
+    
+    if length(image_tot) == 1
+        image = transpose(image_tot.image);
+    else
+        image = transpose(image_tot(1).image);
+    end
+    steps_x = size(image, 1);
+    steps_y = size(image, 2);
+
+    results.dx = (multem_input.scanning_xe-multem_input.scanning_x0) / double(steps_x);
+    results.dy = (multem_input.scanning_ye-multem_input.scanning_y0) / double(steps_y);
+
+    results.images = zeros(steps_x, steps_y, length(multem_output.data), detectors);
+    
+    
+    if length(multem_output.data) == 1
+        if length(multem_output.data.image_tot) == 1
+            results.images(:, :, 1, 1) = transpose(multem_output.data.image_tot.image);
+        else
+            for det=1:detectors
+                results.images(:,:, 1, det) = transpose(multem_output.data.image_tot(det).image);
+            end
         end
     else
         for t = 1:length(multem_output.data)
