@@ -29,6 +29,7 @@ function [input_multem] = STEM_setup(model_path, alpha, collection_angles, varar
     default_instrument = "";
     default_print_parser = 0;
     default_print_details = 1;
+    default_scanning_periodic = 1;
     default_MULTEM_path = '/cluster/projects/itea_lille-nv-fys-tem/repositories/multem';
     
     p = inputParser;
@@ -58,6 +59,7 @@ function [input_multem] = STEM_setup(model_path, alpha, collection_angles, varar
     addParameter(p, "print_parser", default_print_parser, validScalarPosNum);
     addParameter(p, "print_details", default_print_details, validScalarPosNum);
     addParameter(p, "MULTEM_path", default_MULTEM_path, validStrChar);
+    addParameter(p, "scanning_periodic", default_scanning_periodic, validScalarPosNum);
     parse(p, model_path, alpha, collection_angles, varargin{:});
     
     if p.Results.print_parser
@@ -116,7 +118,7 @@ function [input_multem] = STEM_setup(model_path, alpha, collection_angles, varar
     
     %%%%%%%%%%%%%%%%%%%%%% Scanning region %%%%%%%%%%%%%%%%%%%%%%%%%%%
     input_multem.scanning_type = 2; % eST_Line = 1, eST_Area = 2
-    input_multem.scanning_periodic = 0;     % 1: true, 0:false (periodic boundary conditions)
+    input_multem.scanning_periodic = p.Results.scanning_periodic;     % 1: true, 0:false (periodic boundary conditions)
     input_multem.scanning_ns = p.Results.scanning_ns;
     
     if isnan(p.Results.center_x)
