@@ -181,14 +181,14 @@ function [input_multem] = CBED_setup(model_path, alpha, varargin)
     
     % Set aberrations
     if strcmp(p.Results.instrument, "")
-        aberrations = nan;
+        aberrations = no_aberrations();
     elseif strcmp(p.Results.instrument, "ARM200F")
         aberrations = ARM200F_aberrations();
     elseif strcmp(p.Results.instrument, "2100F")
         aberrations = JEM2100F_aberrations();
     else
         fprintf("Could not understand instrument %s, using default aberrations", p.Results.instrument);
-        aberrations = nan;
+        aberrations = no_aberrations();
     end
     
     if isstruct(aberrations)
